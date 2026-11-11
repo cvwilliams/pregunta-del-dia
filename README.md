@@ -153,3 +153,7 @@ Dockerfile, compose.yaml, Makefile   Docker-based dev and build
 
 - Typeface: [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque), loaded from Google Fonts. The app icons outline its glyphs. It's licensed under the SIL Open Font License.
 - Built with [Preact](https://preactjs.com), [Vite](https://vitejs.dev) and [vite-plugin-pwa](https://vite-pwa-org.netlify.app).
+
+## License
+
+[MIT](LICENSE) © 2026 Cameron Williams. The typeface is licensed separately under the SIL Open Font License (see Credits).

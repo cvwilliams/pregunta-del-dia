@@ -1,0 +1,76 @@
+/* Standalone-app shell: felt-textured page background and the theme toggle.
+   The background is the same navy in light and dark mode; only the cards change.
+   The base colour lives inline in index.html so it applies before first paint. */
+
+:root {
+  /* Fine fibres: grey fractal noise, blended with soft-light so it keeps the navy hue. */
+  --app-felt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='.4' intercept='.3'/%3E%3CfeFuncG type='linear' slope='.4' intercept='.3'/%3E%3CfeFuncB type='linear' slope='.4' intercept='.3'/%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  /* Very faint large-scale unevenness so it reads as cloth rather than flat colour. */
+  --app-mottle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='m' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='.22' intercept='.39'/%3E%3CfeFuncG type='linear' slope='.22' intercept='.39'/%3E%3CfeFuncB type='linear' slope='.22' intercept='.39'/%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+}
+
+html {
+  background:
+    var(--app-felt) 0 0 / 160px 160px,
+    var(--app-mottle) 0 0 / 640px 640px,
+    var(--app-bg);
+  background-blend-mode: soft-light, soft-light, normal;
+}
+
+/* soft vignette so the edges sit a little deeper */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(130% 90% at 50% 35%, transparent 55%, rgb(0 8 20 / 0.35));
+  pointer-events: none;
+}
+
+/* The page is navy in both themes, so text sitting on it stays light. */
+.pdd {
+  --pdd-page-text: #e6eef4;
+  --pdd-page-muted: #9fb4c4;
+  --pdd-shadow: 0 12px 34px rgb(0 0 0 / 0.5);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 12px);
+  right: calc(env(safe-area-inset-right) + 12px);
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  background: rgb(255 255 255 / 0.08);
+  color: #e6eef4;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.theme-toggle:hover {
+  transform: rotate(-12deg);
+  background: rgb(255 255 255 / 0.14);
+}
+.theme-toggle:focus-visible {
+  outline: 3px solid #f6eedb;
+  outline-offset: 3px;
+}
+.theme-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle {
+    transition: none;
+  }
+  .theme-toggle:hover {
+    transform: none;
+  }
+}

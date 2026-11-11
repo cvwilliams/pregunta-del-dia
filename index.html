@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Pregunta del día</title>
+    <meta name="description" content="Draw one Spanish conversation card every day." />
+    <meta name="theme-color" content="#012a45" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pregunta" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" />
+    <script>
+      // Apply a saved light/dark choice before first paint (no saved choice = follow the OS).
+      try {
+        var t = localStorage.getItem('pdd-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --app-bg: #012a45; /* same in both themes; only the cards change */
+      }
+      :root[data-theme='light'] { color-scheme: light; }
+      :root[data-theme='dark'] { color-scheme: dark; }
+      html { background: var(--app-bg); }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center;
+        padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+    </style>
+  </head>
+  <body>
+    <main id="app"></main>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

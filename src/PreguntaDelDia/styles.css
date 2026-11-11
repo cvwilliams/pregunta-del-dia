@@ -1,0 +1,483 @@
+/*
+ * Override any of these custom properties from your site's CSS to theme the deck.
+ * Colours are written with light-dark(), so each token holds both themes. The
+ * deck follows the OS setting; set data-theme="light" | "dark" on <html> (or on
+ * the section itself) to force one.
+ */
+.pdd {
+  color-scheme: light dark;
+
+  --pdd-card-w: min(320px, 82vw);
+  --pdd-deck-step: 1px; /* how far each card under today's sticks out */
+  --pdd-radius: 18px;
+  --pdd-text: light-dark(#0e2638, #e6eef4);
+  --pdd-muted: light-dark(#4f6678, #9fb4c4);
+  --pdd-paper: light-dark(#fffaf2, #0f2b40);
+  --pdd-paper-edge: light-dark(#e6dcc8, #234a64);
+  --pdd-accent: light-dark(#1b6b4f, #74d1a4);
+  --pdd-on-accent: light-dark(#ffffff, #05261a);
+  --pdd-focus: #f6eedb; /* focus ring on the navy page */
+  --pdd-shadow: light-dark(0 10px 30px rgb(1 42 69 / 0.22), 0 12px 34px rgb(0 0 0 / 0.5));
+  /* text that sits on the page (title, date, footer) rather than on a card */
+  --pdd-page-text: var(--pdd-text);
+  --pdd-page-muted: var(--pdd-muted);
+
+  /* card back */
+  --pdd-back-1: #1f6a51;
+  --pdd-back-2: #123f33;
+  --pdd-back-frame: light-dark(#f6eedb, #e9dfc6);
+  --pdd-back-line: var(--pdd-back-ink);
+  --pdd-back-ink: #f6eedb;
+  --pdd-back-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='80' viewBox='0 0 64 80' fill-opacity='.22'%3E%3Cpath d='M0-20 21 0 0 20-21 0ZM64-20l21 20-21 20-21-20ZM0 60l21 20-21 20-21-20ZM64 60l21 20-21 20-21-20ZM32 10l16.5 12-2.5 18 2.5 18L32 70 15.5 58 18 40l-2.5-18Z'/%3E%3C/svg%3E");
+
+  --pdd-font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --pdd-font-body: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  color: var(--pdd-text);
+  font-family: var(--pdd-font-body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+:root[data-theme='light'] .pdd,
+.pdd[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] .pdd,
+.pdd[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+.pdd *,
+.pdd *::before,
+.pdd *::after {
+  box-sizing: border-box;
+}
+
+.pdd__header {
+  text-align: center;
+  color: var(--pdd-page-text);
+  /* extra room so the card can lift and tilt on hover without crowding the date */
+  margin-bottom: 1rem;
+}
+.pdd__title {
+  margin: 0;
+  font-family: var(--pdd-font-display);
+  font-size: clamp(2rem, 9vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.pdd__date {
+  margin: 0.35rem 0 0;
+  color: var(--pdd-page-muted);
+  font-size: 1.1rem;
+}
+.pdd__date::first-letter {
+  text-transform: uppercase;
+}
+
+/* ---------- stage & deck ---------- */
+.pdd__stage {
+  position: relative;
+  width: var(--pdd-card-w);
+  aspect-ratio: 5 / 7;
+  /* room for the deck's edge showing below today's card */
+  margin-bottom: calc(var(--pdd-deck-layers, 0) * var(--pdd-deck-step) + 6px);
+  perspective: 1400px;
+}
+
+/* The cards under today's: only their bottom edges show, so each is just a
+   cream card shape. Alternating shades plus a hairline make the edge read as
+   a stack of individual cards. */
+.pdd__deck-card {
+  --edge: color-mix(in srgb, var(--pdd-back-frame) calc(100% - var(--i) * 0.45%), #4a3c28);
+  position: absolute;
+  inset: 0;
+  border-radius: var(--pdd-radius);
+  background: var(--edge);
+  box-shadow: 0 0.5px 0 rgb(40 28 12 / 0.3);
+  transform: translate(var(--x, 0), calc(var(--i) * var(--pdd-deck-step))) rotate(var(--r, 0));
+}
+.pdd__deck-card:nth-child(even) {
+  background: color-mix(in srgb, var(--edge) 88%, #6b5a40);
+}
+/* the bottom card carries the whole deck's shadow */
+.pdd__deck-card:first-child {
+  box-shadow: var(--pdd-shadow);
+}
+.pdd__face--back,
+.pdd__deck-card.pdd__deck-card--top {
+  border-radius: var(--pdd-radius);
+  background:
+    var(--pdd-back-pattern) center / 40px 50px,
+    radial-gradient(120% 90% at 30% 20%, rgb(255 255 255 / 0.1), transparent 60%),
+    linear-gradient(160deg, var(--pdd-back-1), var(--pdd-back-2));
+  border: 7px solid var(--pdd-back-frame);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.08), var(--pdd-shadow);
+}
+/* thin cream rule just inside the frame, like a printed card */
+.pdd__face--back::after,
+.pdd__deck-card--top::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1.5px solid var(--pdd-back-line);
+  border-radius: calc(var(--pdd-radius) - 10px);
+  box-shadow: inset 0 0 0 3px rgb(0 0 0 / 0.12);
+  pointer-events: none;
+}
+/* the top of the deck is a real card back, revealed while today's card is drawn */
+.pdd__deck-card.pdd__deck-card--top {
+  box-shadow: 0 0.5px 0 rgb(40 28 12 / 0.3);
+}
+.pdd__deck-card.pdd__deck-card--top:first-child {
+  box-shadow: var(--pdd-shadow);
+}
+
+
+/* ---------- the drawn card ---------- */
+.pdd__card {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  perspective: 1100px; /* so the flip turns in real 3D */
+  transform-origin: 50% 60%;
+}
+
+.pdd__card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.pdd__card.is-flipped .pdd__card-inner {
+  transform: rotateY(180deg);
+}
+/* Arriving on a card that's already drawn: show it face up, no flip. */
+.pdd__card.is-instant .pdd__card-inner {
+  transition: none;
+}
+
+/*
+ * Drawing today's card, as one hand-like motion (1.6s):
+ *   lift  - a thumb catches the edge and lifts it a touch
+ *   pull  - slid down off the deck toward you, drifting and growing slightly
+ *   beat  - the smallest hesitation before the flick
+ *   flick - turned over on a wrist-tilted axis while rising back into place
+ *   settle- lands with a small overshoot and a damped wobble
+ * The card (position) and its inner (the flip) run separate keyframes on the
+ * same clock so the flip can start mid-pull, as a hand would.
+ */
+.pdd__card.is-drawing {
+  animation: pdd-draw 1.6s linear both;
+}
+.pdd__card.is-drawing .pdd__card-inner {
+  transition: none;
+  animation: pdd-flip 1.6s linear both;
+}
+
+@keyframes pdd-draw {
+  0% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0.35, 0, 0.6, 1);
+  }
+  9% { /* lift */
+    transform: translate(-0.5%, -1.8%) rotate(-0.8deg) scale(1.01);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.25, 1);
+  }
+  40% { /* pull */
+    transform: translate(3%, 31%) rotate(2.6deg) scale(1.055);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  47% { /* beat */
+    transform: translate(3.4%, 32%) rotate(2.2deg) scale(1.06);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+  }
+  74% { /* flick up, past home */
+    transform: translate(-0.6%, -3.2%) rotate(-1.3deg) scale(1.025);
+    animation-timing-function: cubic-bezier(0.35, 0, 0.4, 1);
+  }
+  86% { /* settle */
+    transform: translate(0.2%, 0.9%) rotate(0.45deg) scale(1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
+  }
+  94% {
+    transform: translate(0, -0.3%) rotate(-0.15deg);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes pdd-flip {
+  0%,
+  44% {
+    transform: rotateY(0deg);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.3, 1);
+  }
+  60% { /* edge-on, tipped by the wrist */
+    transform: rotateX(9deg) rotateY(98deg) rotateZ(-2deg);
+    animation-timing-function: cubic-bezier(0.2, 0, 0.3, 1);
+  }
+  77% { /* a hair past face up */
+    transform: rotateX(-3deg) rotateY(193deg) rotateZ(0.8deg);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
+  }
+  89% {
+    transform: rotateX(1deg) rotateY(177.5deg) rotateZ(-0.2deg);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    transform: rotateY(180deg);
+  }
+}
+
+.pdd__card.is-ready .pdd__face--back {
+  cursor: pointer;
+  animation: pdd-nudge 3.5s ease-in-out 1.5s infinite;
+}
+.pdd__card.is-ready .pdd__face--back:hover,
+.pdd__card.is-ready .pdd__face--back:focus-visible,
+.pdd__card.is-turnable .pdd__face--back:hover,
+.pdd__card.is-turnable .pdd__face--back:focus-visible {
+  animation: none;
+  transform: translateY(-8px) rotate(-1.5deg);
+}
+.pdd__card.is-turnable .pdd__face--back {
+  cursor: pointer;
+}
+
+@keyframes pdd-nudge {
+  0%, 85%, 100% { transform: none; }
+  90% { transform: translateY(-6px) rotate(-1.5deg); }
+  95% { transform: translateY(-2px) rotate(1deg); }
+}
+
+.pdd__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.pdd__face--back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  font: inherit;
+  color: var(--pdd-back-ink);
+  transition: transform 0.25s ease;
+}
+.pdd__face--back:disabled {
+  cursor: default;
+}
+.pdd__face--back:focus-visible {
+  outline: 4px solid var(--pdd-focus);
+  outline-offset: 5px;
+}
+
+.pdd__emblem {
+  display: grid;
+  place-items: center;
+  width: 42%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid var(--pdd-back-line);
+  outline: 1.5px solid color-mix(in srgb, var(--pdd-back-line) 55%, transparent);
+  outline-offset: 4px;
+  font-family: var(--pdd-font-display);
+  font-size: clamp(2.5rem, 12vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: var(--pdd-back-2);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--pdd-back-2) 70%, transparent);
+}
+.pdd__cta {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.pdd__face--front {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border-radius: var(--pdd-radius);
+  background: var(--pdd-paper);
+  border: 1px solid var(--pdd-paper-edge);
+  box-shadow: var(--pdd-shadow);
+  overflow-y: auto;
+}
+.pdd__face--front::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1.5px solid var(--pdd-paper-edge);
+  border-radius: calc(var(--pdd-radius) - 6px);
+  pointer-events: none;
+}
+
+.pdd__meta {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: space-between;
+}
+.pdd__chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pdd-accent) 12%, transparent);
+  color: var(--pdd-accent);
+}
+.pdd__chip--level {
+  background: var(--pdd-accent);
+  color: var(--pdd-on-accent);
+}
+
+.pdd__question {
+  margin: auto 0;
+  font-family: var(--pdd-font-display);
+  font-size: clamp(1.6rem, 7vw, 2rem);
+  line-height: 1.25;
+  font-weight: 600;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.pdd__actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pdd__btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--pdd-paper-edge);
+  background: transparent;
+  color: var(--pdd-text);
+  cursor: pointer;
+}
+.pdd__btn:hover {
+  border-color: var(--pdd-accent);
+  color: var(--pdd-accent);
+}
+.pdd__btn:focus-visible {
+  outline: 2px solid var(--pdd-accent);
+  outline-offset: 2px;
+}
+/* the help toggle keeps one label; the open state is shown by filling it in */
+.pdd__btn[aria-expanded='true'] {
+  background: var(--pdd-accent);
+  border-color: var(--pdd-accent);
+  color: var(--pdd-on-accent);
+}
+.pdd__btn--icon {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  padding: 0;
+}
+.pdd__btn--icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.pdd__help {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  animation: pdd-fade 0.25s ease;
+}
+.pdd__translation {
+  margin: 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--pdd-muted);
+}
+.pdd__vocab {
+  margin: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+.pdd__vocab div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px dashed var(--pdd-paper-edge);
+  padding-bottom: 0.15rem;
+}
+.pdd__vocab dt {
+  font-weight: 600;
+}
+.pdd__vocab dd {
+  margin: 0;
+  color: var(--pdd-muted);
+  text-align: right;
+}
+.pdd__starter {
+  margin: 0;
+  text-align: center;
+}
+.pdd__starter::before {
+  content: '✍️ ';
+}
+
+@keyframes pdd-fade {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+.pdd__footer {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 1.1rem;
+  color: var(--pdd-page-muted);
+  min-height: 1.5em;
+}
+.pdd__countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--pdd-page-text);
+}
+.pdd__streak {
+  font-weight: 600;
+  color: var(--pdd-page-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdd__card-inner,
+  .pdd__face--back {
+    transition: none;
+  }
+  .pdd__card.is-drawing,
+  .pdd__card.is-drawing .pdd__card-inner,
+  .pdd__card.is-ready .pdd__face--back,
+  .pdd__help {
+    animation: none;
+  }
+  /* animationend never fires without the animation, so finish via a tiny one */
+  .pdd__card.is-drawing {
+    animation: pdd-fade 0.01s;
+  }
+}

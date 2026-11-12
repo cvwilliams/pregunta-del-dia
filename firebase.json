@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "pregunta-del-dia",
+    "site": "pregunta-dia",
     "public": "dist",
     "cleanUrls": true,
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],

@@ -1,33 +1,56 @@
-export interface SavedState {
-  /** Local day numbers on which the viewer drew a card. */
-  days: number[];
-}
+import { newState, sync, type DayCount, type DeckState, type DrawnCard, type Rng } from './deck';
 
-const MAX_DAYS = 400;
-
-export function loadState(key: string): SavedState {
+/**
+ * Load the viewer's deck from localStorage, brought in line with the current
+ * questions. Starts a fresh shuffled deck if nothing is saved or storage is
+ * unavailable (private mode etc.).
+ *
+ * Version 1 (one shared card a day) saved only `{ days: number[] }`. Those days
+ * carry over so the streak survives; it didn't record which cards were drawn.
+ */
+export function loadState(key: string, ids: string[], defaultDeckId: string, rng: Rng): DeckState {
+  let saved: DeckState | null = null;
   try {
     const raw = localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && Array.isArray(parsed.days)) {
-      return { days: parsed.days.filter((d: unknown) => typeof d === 'number') };
-    }
+    saved = raw ? parse(JSON.parse(raw), ids, defaultDeckId, rng) : null;
   } catch {
-    /* storage unavailable (private mode etc.) */
+    /* unreadable or unavailable: start fresh */
   }
-  return { days: [] };
+  return sync(saved ?? newState(ids, defaultDeckId, rng), ids, rng);
 }
 
-export function saveDraw(key: string, day: number): SavedState {
-  const state = loadState(key);
-  if (!state.days.includes(day)) state.days.push(day);
-  state.days = state.days.sort((a, b) => a - b).slice(-MAX_DAYS);
+export function saveState(key: string, state: DeckState): void {
   try {
     localStorage.setItem(key, JSON.stringify(state));
   } catch {
-    /* ignore */
+    /* storage full or unavailable: the deck still works for this visit */
   }
-  return state;
+}
+
+const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+const isStr = (x: unknown): x is string => typeof x === 'string';
+
+function parse(data: any, ids: string[], defaultDeckId: string, rng: Rng): DeckState | null {
+  if (!data || typeof data !== 'object') return null;
+  if (data.v === 2) {
+    return {
+      v: 2,
+      order: Array.isArray(data.order) ? data.order.filter(isStr) : [],
+      history: Array.isArray(data.history)
+        ? data.history.filter((h: any): h is DrawnCard => h && isStr(h.id) && isNum(h.at))
+        : [],
+      current: isStr(data.current) ? data.current : null,
+      days: Array.isArray(data.days)
+        ? data.days.filter((d: any): d is DayCount => d && isNum(d.day) && isNum(d.draws))
+        : [],
+      deckId: isStr(data.deckId) ? data.deckId : defaultDeckId,
+    };
+  }
+  if (Array.isArray(data.days)) {
+    const days = data.days.filter(isNum).map((day: number) => ({ day, draws: 1 }));
+    return { ...newState(ids, defaultDeckId, rng), days };
+  }
+  return null;
 }
 
 /** Consecutive days drawn, ending today (or yesterday, if today isn't drawn yet). */

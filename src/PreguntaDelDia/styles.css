@@ -1,3 +1,15 @@
+/* Registered so the card-back colours can fade when you switch decks. */
+@property --pdd-back-1 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1f6a51;
+}
+@property --pdd-back-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #123f33;
+}
+
 /*
  * Override any of these custom properties from your site's CSS to theme the deck.
  * Colours are written with light-dark(), so each token holds both themes. The
@@ -8,7 +20,7 @@
   color-scheme: light dark;
 
   --pdd-card-w: min(320px, 82vw);
-  --pdd-deck-step: 1px; /* how far each card under today's sticks out */
+  --pdd-deck-step: 1px; /* how far each card under the top one sticks out */
   --pdd-radius: 18px;
   --pdd-text: light-dark(#0e2638, #e6eef4);
   --pdd-muted: light-dark(#4f6678, #9fb4c4);
@@ -41,6 +53,13 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 0;
+  /* Fill the container so the row of decks scrolls instead of widening the page. */
+  width: 100%;
+  min-width: 0;
+}
+/* With room to spare, the deck sits centred and the tray stays at the bottom. */
+.pdd__header {
+  margin-top: auto;
 }
 
 :root[data-theme='light'] .pdd,
@@ -61,8 +80,6 @@
 .pdd__header {
   text-align: center;
   color: var(--pdd-page-text);
-  /* extra room so the card can lift and tilt on hover without crowding the date */
-  margin-bottom: 1rem;
 }
 .pdd__title {
   margin: 0;
@@ -72,26 +89,171 @@
   line-height: 1.1;
   letter-spacing: -0.01em;
 }
-.pdd__date {
-  margin: 0.35rem 0 0;
-  color: var(--pdd-page-muted);
-  font-size: 1.1rem;
+
+/* ---------- deck tray ---------- */
+/* The decks as small card packs in a row along the bottom, scrolled sideways.
+   Its own width doesn't count towards the page's, so on a phone it scrolls
+   instead of widening the page. */
+.pdd__tray {
+  width: 100%;
+  contain: inline-size;
+  /* pinned to the bottom when the component is taller than its content */
+  margin-top: auto;
 }
-.pdd__date::first-letter {
-  text-transform: uppercase;
+.pdd__tray-track {
+  display: flex;
+  gap: 0.5rem;
+  /* centred when the packs fit; when they don't, they start at the left and scroll */
+  justify-content: flex-start;
+  justify-content: safe center;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding: 14px 24px 6px; /* top: room for the chosen pack's lift */
+  /* soft edges, so a row that scrolls reads as carrying on */
+  mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+.pdd__tray-track::-webkit-scrollbar {
+  display: none;
+}
+.pdd__pack {
+  position: relative; /* keeps its screen-reader text inside the scrolling row */
+  flex: none;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0 4px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--pdd-page-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  scroll-snap-align: center;
+}
+.pdd__pack-cards {
+  position: relative;
+  width: 46px;
+  height: 64px;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+/* two cards peeking out underneath, so each looks like a pack */
+.pdd__pack-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--pdd-back-frame) 85%, #4a3c28);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+.pdd__pack-card:nth-child(1) {
+  transform: translate(4px, 4px) rotate(5deg);
+}
+.pdd__pack-card:nth-child(2) {
+  transform: translate(-3px, 2px) rotate(-3deg);
+}
+.pdd__pack-card--top {
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--pdd-back-frame);
+  background:
+    var(--pdd-back-pattern) center / 14px 17.5px,
+    radial-gradient(120% 90% at 30% 20%, rgb(255 255 255 / 0.1), transparent 60%),
+    linear-gradient(160deg, var(--pdd-back-1), var(--pdd-back-2));
+  color: var(--pdd-back-ink);
+}
+.pdd__pack-card--top::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid var(--pdd-back-line);
+  border-radius: 3px;
+}
+.pdd__pack-emblem {
+  font-family: var(--pdd-font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.pdd__pack-name {
+  max-width: 100%;
+}
+/* cards left, as a badge on the pack's corner */
+.pdd__pack-count {
+  position: absolute;
+  top: -6px;
+  left: calc(50% + 14px);
+  min-width: 1.6rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--pdd-back-frame);
+  color: var(--pdd-back-2);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  transition: transform 0.25s ease;
+}
+.pdd__pack[aria-pressed='true'] .pdd__pack-count {
+  transform: translateY(-10px);
+}
+/* the chosen deck: lifted, full colour, name underlined */
+.pdd__pack[aria-pressed='true'] {
+  color: var(--pdd-page-text);
+}
+.pdd__pack[aria-pressed='true'] .pdd__pack-cards {
+  transform: translateY(-10px) scale(1.06);
+}
+.pdd__pack[aria-pressed='true'] .pdd__pack-card--top {
+  box-shadow: 0 10px 18px rgb(0 0 0 / 0.45);
+}
+.pdd__pack[aria-pressed='true'] .pdd__pack-name {
+  text-decoration: underline 2px;
+  text-underline-offset: 4px;
+}
+.pdd__pack:not([aria-pressed='true']) .pdd__pack-cards {
+  filter: saturate(0.85) brightness(0.88);
+}
+.pdd__pack:hover:not([aria-pressed='true']):not([aria-disabled='true']) .pdd__pack-cards {
+  transform: translateY(-4px);
+  filter: none;
+}
+.pdd__pack:focus-visible {
+  outline: 3px solid var(--pdd-focus);
+  outline-offset: 2px;
+}
+.pdd__pack[aria-disabled='true'] {
+  cursor: default;
+}
+
+/* the Historial button's count, as a small badge */
+.pdd__tool-count {
+  min-width: 1.6em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 /* ---------- stage & deck ---------- */
 .pdd__stage {
   position: relative;
+  /* fade between deck colours when you switch decks */
+  transition: --pdd-back-1 0.5s ease, --pdd-back-2 0.5s ease;
   width: var(--pdd-card-w);
   aspect-ratio: 5 / 7;
-  /* room for the deck's edge showing below today's card */
+  /* room for the deck's edge showing below the top card */
   margin-bottom: calc(var(--pdd-deck-layers, 0) * var(--pdd-deck-step) + 6px);
   perspective: 1400px;
 }
 
-/* The cards under today's: only their bottom edges show, so each is just a
+/* The cards under the top one: only their bottom edges show, so each is just a
    cream card shape. Alternating shades plus a hairline make the edge read as
    a stack of individual cards. */
 .pdd__deck-card {
@@ -111,7 +273,8 @@
   box-shadow: var(--pdd-shadow);
 }
 .pdd__face--back,
-.pdd__deck-card.pdd__deck-card--top {
+.pdd__deck-card.pdd__deck-card--top,
+.pdd__shuffle-card {
   border-radius: var(--pdd-radius);
   background:
     var(--pdd-back-pattern) center / 40px 50px,
@@ -122,7 +285,8 @@
 }
 /* thin cream rule just inside the frame, like a printed card */
 .pdd__face--back::after,
-.pdd__deck-card--top::after {
+.pdd__deck-card--top::after,
+.pdd__shuffle-card::after {
   content: '';
   position: absolute;
   inset: 5px;
@@ -131,7 +295,7 @@
   box-shadow: inset 0 0 0 3px rgb(0 0 0 / 0.12);
   pointer-events: none;
 }
-/* the top of the deck is a real card back, revealed while today's card is drawn */
+/* the top of the deck is a real card back, revealed while a card is being drawn */
 .pdd__deck-card.pdd__deck-card--top {
   box-shadow: 0 0.5px 0 rgb(40 28 12 / 0.3);
 }
@@ -139,6 +303,101 @@
   box-shadow: var(--pdd-shadow);
 }
 
+
+/* the top of the deck and the shuffle's stand-ins carry the same emblem as the drawn card */
+.pdd__deck-card--top,
+.pdd__shuffle-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pdd-back-ink);
+}
+
+/* ---------- shuffle ---------- */
+/* While shuffling, stand-in card backs replace the deck and the card on top. */
+.pdd__stage.is-shuffling .pdd__deck,
+.pdd__stage.is-shuffling .pdd__card {
+  visibility: hidden;
+}
+.pdd__shuffle {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  perspective: 1200px; /* for the bridge, where the halves arch toward you */
+  pointer-events: none;
+}
+.pdd__shuffle-card {
+  position: absolute;
+  inset: 0;
+  /* sixteen big soft shadows would turn to mud; each stand-in gets a small one */
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  will-change: transform;
+}
+.pdd__shuffle-card:first-child {
+  box-shadow: var(--pdd-shadow);
+}
+
+.pdd__tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: -0.25rem;
+}
+.pdd__tool {
+  position: relative; /* keeps a visually hidden label inside the button */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--pdd-page-text) 45%, transparent); /* 3:1 on the page */
+  background: transparent;
+  color: var(--pdd-page-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.pdd__tool svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.pdd__tool:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--pdd-page-text) 75%, transparent);
+  background: color-mix(in srgb, var(--pdd-page-text) 8%, transparent);
+}
+.pdd__tool:focus-visible {
+  outline: 3px solid var(--pdd-focus);
+  outline-offset: 3px;
+}
+@media (max-width: 420px) {
+  .pdd__tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+.pdd__tool--primary,
+.pdd__tool--primary:hover:not(:disabled) {
+  background: var(--pdd-back-frame);
+  border-color: var(--pdd-back-frame);
+  color: var(--pdd-back-2);
+}
+.pdd__tool--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pdd-back-frame) 88%, white);
+}
+.pdd__tool:disabled,
+.pdd__tool[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
 
 /* ---------- the drawn card ---------- */
 .pdd__card {
@@ -165,7 +424,7 @@
 }
 
 /*
- * Drawing today's card, as one hand-like motion (1.6s):
+ * Drawing a card, as one hand-like motion (1.6s):
  *   lift  - a thumb catches the edge and lifts it a touch
  *   pull  - slid down off the deck toward you, drifting and growing slightly
  *   beat  - the smallest hesitation before the flick
@@ -239,6 +498,38 @@
   }
 }
 
+/* Clearing the card off the table for the next one: slid off to the side, as if
+   tossed onto a pile. */
+.pdd__card.is-discarding {
+  animation: pdd-discard 0.45s cubic-bezier(0.5, 0, 0.75, 0.4) both;
+}
+@keyframes pdd-discard {
+  to {
+    transform: translate(70%, 6%) rotate(14deg) scale(0.92);
+    opacity: 0;
+  }
+}
+
+/* No cards left in this deck: an empty spot where the deck was. */
+.pdd__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: var(--pdd-radius);
+  border: 2px dashed color-mix(in srgb, var(--pdd-page-text) 45%, transparent);
+  color: var(--pdd-page-text);
+  text-align: center;
+  font-size: 1.1rem;
+}
+.pdd__empty p {
+  margin: 0;
+}
+
 .pdd__card.is-ready .pdd__face--back {
   cursor: pointer;
   animation: pdd-nudge 3.5s ease-in-out 1.5s infinite;
@@ -310,6 +601,10 @@
 
 .pdd__face--front {
   transform: rotateY(180deg);
+}
+/* The printed face of a card: on the table, and in the history. */
+.pdd__paper {
+  container-type: inline-size; /* so its text and buttons can scale with the card */
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -320,7 +615,7 @@
   box-shadow: var(--pdd-shadow);
   overflow-y: auto;
 }
-.pdd__face--front::before {
+.pdd__paper::before {
   content: '';
   position: absolute;
   inset: 8px;
@@ -385,6 +680,19 @@
   background: transparent;
   color: var(--pdd-text);
   cursor: pointer;
+}
+/* Small cards (short screens, the history): scale the question, keep the buttons on one row. */
+.pdd__paper .pdd__question {
+  font-size: clamp(1.25rem, 11cqi, 2rem);
+}
+@container (max-width: 290px) {
+  .pdd__actions {
+    gap: 0.3rem;
+  }
+  .pdd__btn {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.8rem;
+  }
 }
 .pdd__btn:hover {
   border-color: var(--pdd-accent);
@@ -463,11 +771,6 @@
   color: var(--pdd-page-muted);
   min-height: 1.5em;
 }
-.pdd__countdown {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--pdd-page-text);
-}
 .pdd__streak {
   font-weight: 600;
   color: var(--pdd-page-text);
@@ -488,6 +791,13 @@
   .pdd__card.is-drawing {
     animation: pdd-fade 0.01s;
   }
+  .pdd__card.is-discarding {
+    animation: pdd-fade 0.01s reverse both;
+  }
+  .pdd__stage,
+  .pdd__pack-cards {
+    transition: none;
+  }
 }
 
 /* Read by screen readers, not shown. */
@@ -501,4 +811,127 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ---------- history ---------- */
+/* Full screen over the page: the cards you've drawn, swiped through one at a time. */
+.pdd__history {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: calc(env(safe-area-inset-top) + 12px) 0 calc(env(safe-area-inset-bottom) + 20px);
+  border: 0;
+  background: rgb(1 30 50 / 0.96);
+  color: var(--pdd-page-text);
+  font-family: var(--pdd-font-body);
+  color-scheme: inherit;
+}
+.pdd__history[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.pdd__history::backdrop {
+  background: rgb(0 10 20 / 0.5);
+}
+.pdd__history-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.pdd__history-title {
+  margin: 0 auto 0 0;
+  font-family: var(--pdd-font-display);
+  font-size: 1.6rem;
+}
+.pdd__history-close,
+.pdd__history-arrow {
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.pdd__history-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: calc(100% - 32px);
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.08);
+}
+.pdd__history-confirm p {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+}
+.pdd__history-where {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0;
+  color: var(--pdd-page-muted);
+  font-weight: 600;
+}
+.pdd__history-pos {
+  font-variant-numeric: tabular-nums;
+}
+.pdd__history-track {
+  /* as big as fits, leaving room for the header, the date and the buttons */
+  --pdd-history-card-w: min(320px, 80vw, max(220px, calc((100dvh - 260px) * 5 / 7)));
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* side padding centres the first and last cards */
+  padding: 8px calc(50% - var(--pdd-history-card-w) / 2);
+}
+.pdd__history-track::-webkit-scrollbar {
+  display: none;
+}
+.pdd__history-card {
+  position: relative;
+  flex: none;
+  width: var(--pdd-history-card-w);
+  aspect-ratio: 5 / 7;
+  max-height: 100%;
+  scroll-snap-align: center;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+/* the cards either side, smaller and dimmed, show there's more to swipe to */
+.pdd__history-card[inert] {
+  transform: scale(0.92);
+  opacity: 0.55;
+}
+.pdd__history-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+.pdd__history-empty {
+  margin: auto;
+  color: var(--pdd-page-muted);
+  font-size: 1.1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdd__history-card {
+    transition: none;
+  }
 }

@@ -1,8 +1,9 @@
 """Build the app icons: outline '¿?' from the app's display font (Bricolage Grotesque),
-write SVGs, render PNGs with rsvg-convert.
+write SVGs, render PNGs with rsvg-convert, and pack public/favicon.ico.
 
 Run `make icons` (Docker). Directly: python make_icons.py <font.ttf> <out_dir>
 """
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -115,3 +116,22 @@ for src, name, size in [
     subprocess.run(['rsvg-convert', '-w', str(size), '-h', str(size), '-o', str(out / name), str(out / src)], check=True)
     print('wrote', name)
 apple.unlink()
+
+# favicon.ico for browsers that don't use SVG favicons (Safari) or that just request
+# /favicon.ico. Without one they fall back to a guess, such as the parent domain's icon.
+# Each size is rendered from the SVG so it stays crisp, and stored as PNG inside the ICO.
+sizes = [16, 32, 48]
+pngs = []
+for size in sizes:
+    tmp = out / f'.favicon-{size}.png'
+    subprocess.run(['rsvg-convert', '-w', str(size), '-h', str(size), '-o', str(tmp), str(out / 'icon.svg')], check=True)
+    pngs.append(tmp.read_bytes())
+    tmp.unlink()
+header = struct.pack('<HHH', 0, 1, len(sizes))
+offset = len(header) + 16 * len(sizes)
+entries = b''
+for size, data in zip(sizes, pngs):
+    entries += struct.pack('<BBBBHHII', size, size, 0, 0, 1, 32, len(data), offset)
+    offset += len(data)
+(out.parent / 'favicon.ico').write_bytes(header + entries + b''.join(pngs))
+print('wrote favicon.ico')

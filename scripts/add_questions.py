@@ -42,18 +42,36 @@ decks_ts = (ROOT / 'src/PreguntaDelDia/decks.ts').read_text()
 block = decks_ts[decks_ts.index(f"id: '{deck}'"):]
 allowed = set(re.findall(r"'([^']+)'", block[block.index('categories: [') : block.index(']')]))
 
+def filled(s) -> bool:
+    return isinstance(s, str) and s.strip() != ''
+
+
+def punctuated(es: str, en: str) -> bool:
+    """Same rule as the tests: ¿…? questions (¿ may open mid-sentence), or prompts ending in a full stop."""
+    return (es.endswith('?') and '¿' in es and en.endswith('?')) or (
+        es.endswith('.') and '¿' not in es and en.endswith('.'))
+
+
 new = []
 for level, category, es, en, vocab, starter in cards:
     problems = []
-    if norm(es) in seen:
+    if not filled(es):
+        problems.append('needs the Spanish question')
+    elif norm(es) in seen:
         problems.append('repeats an existing question')
+    if not filled(en):
+        problems.append('needs the English translation')
+    if filled(es) and filled(en) and not punctuated(es.strip(), en.strip()):
+        problems.append('punctuation: ¿…? and …? for questions, a full stop in both for prompts')
     if category not in allowed:
         problems.append(f'category {category!r} is not in {deck}: {sorted(allowed)}')
     if level not in LEVELS:
         problems.append(f'level {level!r}')
     if not 2 <= len(vocab) <= 4:
         problems.append('needs 2–4 vocab pairs')
-    if not starter.strip():
+    if not all(len(pair) == 2 and filled(pair[0]) and filled(pair[1]) for pair in vocab):
+        problems.append('every vocab pair needs both the Spanish and the English')
+    if not filled(starter):
         problems.append('needs a starter')
     if problems:
         sys.exit(f'Not added (nothing was written): {es}\n  ' + '\n  '.join(problems))

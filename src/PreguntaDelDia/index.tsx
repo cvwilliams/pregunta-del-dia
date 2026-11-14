@@ -98,10 +98,16 @@ export default function PreguntaDelDia({
   // The built-in questions are a large file (about 3,000 cards), so they load on their
   // own after the deck has painted. Questions passed as a prop are used straight away.
   const [builtIn, setBuiltIn] = useState<Question[] | null>(null);
+  // If that file can't be fetched (offline on a first visit, a flaky connection), say
+  // so and offer a reload. The saved deck is untouched: it only loads with the questions.
+  const [loadFailed, setLoadFailed] = useState(false);
   useEffect(() => {
     if (questionsProp) return;
     let live = true;
-    import('./questions').then((m) => live && setBuiltIn(m.questions));
+    import('./questions').then(
+      (m) => live && setBuiltIn(m.questions),
+      () => live && setLoadFailed(true),
+    );
     return () => {
       live = false;
     };
@@ -345,7 +351,15 @@ export default function PreguntaDelDia({
           ...(back && { '--pdd-back-1': back[0], '--pdd-back-2': back[1] }),
         }}
       >
-        {empty ? (
+        {loadFailed ? (
+          <div class="pdd__empty" role="alert">
+            <p>No se pudieron cargar las preguntas.</p>
+            {/* A reload, not another import(): browsers can cache a failed module load. */}
+            <button type="button" class="pdd__tool pdd__tool--primary" onClick={() => location.reload()}>
+              Volver a intentar
+            </button>
+          </div>
+        ) : empty ? (
           <div class="pdd__empty">
             <p>No quedan cartas en esta baraja.</p>
             <button ref={emptyRef} type="button" class="pdd__tool pdd__tool--primary" onClick={() => putAllBack(deckId, true)}>

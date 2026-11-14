@@ -84,3 +84,31 @@ body::after {
     transform: none;
   }
 }
+
+/* The deck fills the screen, so its tray of decks sits along the bottom edge. */
+body {
+  grid-template-columns: minmax(0, 1fr);
+}
+#app {
+  width: 100%; /* full width, whatever the content's width, so the tray spans the screen */
+}
+.pdd {
+  box-sizing: border-box;
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  /* On shorter screens the card shrinks (never below 210px wide) so the tray stays
+     in view; about 450px of height goes to the title, deck edge, footer, buttons and tray. */
+  --pdd-card-w: min(320px, 82vw, max(210px, calc((100dvh - 450px) * 5 / 7)));
+}
+/* ...and the deck's edge gets a little thinner. */
+@media (max-height: 900px) {
+  .pdd {
+    --pdd-deck-step: 0.7px;
+  }
+}
+
+/* On narrow screens, keep the title clear of the fixed theme toggle (44px at 12px from the top). */
+@media (max-width: 560px) {
+  .pdd {
+    padding-top: 3.25rem;
+  }
+}

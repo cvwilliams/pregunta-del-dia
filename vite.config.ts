@@ -29,9 +29,9 @@ export default defineConfig({
         ],
         // Shown in the richer install dialog (Chrome on Android and desktop).
         screenshots: [
-          { src: 'screenshots/narrow-deck.webp', sizes: '1170x2532', type: 'image/webp', form_factor: 'narrow', label: 'Hoy toca una carta nueva' },
-          { src: 'screenshots/narrow-card.webp', sizes: '1170x2532', type: 'image/webp', form_factor: 'narrow', label: 'La pregunta del día, con traducción y vocabulario' },
-          { src: 'screenshots/wide-card.webp', sizes: '1920x1200', type: 'image/webp', form_factor: 'wide', label: 'La pregunta del día' },
+          { src: 'screenshots/narrow-deck.webp', sizes: '1170x2532', type: 'image/webp', form_factor: 'narrow', label: 'Elige una baraja y saca una carta' },
+          { src: 'screenshots/narrow-card.webp', sizes: '1170x2532', type: 'image/webp', form_factor: 'narrow', label: 'Cada carta, con traducción y vocabulario' },
+          { src: 'screenshots/wide-card.webp', sizes: '1920x1200', type: 'image/webp', form_factor: 'wide', label: 'Preguntas para conversar en español' },
         ],
       },
       workbox: {

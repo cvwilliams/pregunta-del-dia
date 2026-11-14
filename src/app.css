@@ -2,6 +2,16 @@
    The background is the same navy in light and dark mode; only the cards change.
    The base colour lives inline in index.html so it applies before first paint. */
 
+/* Self-hosted Latin subset of Bricolage Grotesque (SIL OFL; see fonts/OFL.txt).
+   Rebuild with `make font`. index.html preloads it so text paints in it first time. */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('./assets/fonts/bricolage-grotesque-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Fine fibres: grey fractal noise, blended with soft-light so it keeps the navy hue. */
   --app-felt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='.4' intercept='.3'/%3E%3CfeFuncG type='linear' slope='.4' intercept='.3'/%3E%3CfeFuncB type='linear' slope='.4' intercept='.3'/%3E%3CfeFuncA type='linear' slope='0' intercept='1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
@@ -45,7 +55,7 @@ body::after {
   height: 44px;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid rgb(255 255 255 / 0.16);
+  border: 1px solid rgb(255 255 255 / 0.42); /* 3:1 against the navy page */
   background: rgb(255 255 255 / 0.08);
   color: #e6eef4;
   backdrop-filter: blur(8px);

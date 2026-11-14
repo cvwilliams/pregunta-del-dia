@@ -9,7 +9,8 @@ registerSW({ immediate: true });
 render(
   <>
     <ThemeToggle />
-    <PreguntaDelDia />
+    {/* The deck is the whole page here, so its title is the page's h1. */}
+    <PreguntaDelDia headingLevel={1} />
   </>,
   document.getElementById('app')!,
 );

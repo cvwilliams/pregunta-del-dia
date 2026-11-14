@@ -1,4 +1,4 @@
-.PHONY: dev build preview icons
+.PHONY: dev build preview icons font
 
 FONT_URL := https://github.com/google/fonts/raw/main/ofl/bricolagegrotesque/BricolageGrotesque%5Bopsz,wdth,wght%5D.ttf
 
@@ -15,3 +15,10 @@ icons:
 	  pip install -q --root-user-action=ignore fonttools && \
 	  python -I -c "import urllib.request as u; u.urlretrieve(\"$(FONT_URL)\", \"/tmp/font.ttf\")" && \
 	  python -I /job/make_icons.py /tmp/font.ttf /out'
+
+# Rebuild the self-hosted font subset in src/assets/fonts from scripts/subset_font.py.
+font:
+	docker run --rm -v ./scripts:/job:ro -v ./src/assets/fonts:/out python:3.12-slim sh -c '\
+	  pip install -q --root-user-action=ignore fonttools brotli && \
+	  python -I -c "import urllib.request as u; u.urlretrieve(\"$(FONT_URL)\", \"/tmp/font.ttf\")" && \
+	  python -I /job/subset_font.py /tmp/font.ttf /out/bricolage-grotesque-latin.woff2'

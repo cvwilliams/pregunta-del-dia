@@ -14,6 +14,8 @@ export interface PreguntaDelDiaProps {
   /** Changes the daily order without changing the questions. */
   salt?: number;
   title?: string;
+  /** Heading level for the title: 2 inside a page (default), 1 when the deck is the whole page. */
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 /** loading → (deck → drawing) | drawn */
@@ -26,6 +28,9 @@ function deckJitter(i: number) {
   const n = (i * 2654435761) >>> 0; // cheap deterministic hash, same every render
   return { x: ((n % 7) - 3) * 0.5, r: (((n >>> 3) % 5) - 2) * 0.12 };
 }
+
+/** The draw animation is 1.6s; if its end event never arrives, finish anyway. */
+const DRAW_FALLBACK_MS = 2200;
 
 const dateFmt = new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -51,7 +56,9 @@ export default function PreguntaDelDia({
   storageKey = 'pregunta-del-dia',
   salt = 0,
   title = 'Pregunta del día',
+  headingLevel = 2,
 }: PreguntaDelDiaProps) {
+  const Heading = `h${headingLevel}` as 'h2';
   const [day, setDay] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [showHelp, setShowHelp] = useState(false);
@@ -64,7 +71,7 @@ export default function PreguntaDelDia({
   const [countdown, setCountdown] = useState('');
   const dayRef = useRef<number | null>(null);
   const backRef = useRef<HTMLButtonElement>(null);
-  const flipBtnRef = useRef<HTMLButtonElement>(null);
+  const questionRef = useRef<HTMLParagraphElement>(null);
   const moveFocus = useRef(false);
   const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
@@ -94,8 +101,18 @@ export default function PreguntaDelDia({
     if (phase !== 'deck' || day === null) return;
     const saved = saveDraw(storageKey, day);
     setStreak(streakFor(saved.days, day));
+    // The button that was pressed turns away with the card; send focus to the question.
+    moveFocus.current = true;
     setPhase('drawing');
   }, [phase, day, storageKey]);
+
+  // The card normally finishes drawing on its animation's end event. If that never
+  // arrives (animations disabled, tab frozen mid-draw), don't leave it stuck.
+  useEffect(() => {
+    if (phase !== 'drawing') return;
+    const t = setTimeout(() => setPhase((p) => (p === 'drawing' ? 'drawn' : p)), DRAW_FALLBACK_MS);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   const loaded = phase !== 'loading';
   useEffect(() => {
@@ -117,12 +134,14 @@ export default function PreguntaDelDia({
     setFaceDown(down);
   }, []);
 
-  // Keep keyboard focus on the visible side after a manual flip.
+  // Keep focus on the visible side after drawing or turning the card: the question
+  // when it's face up (so it's read out), the card's back when it's face down.
   useEffect(() => {
     if (!moveFocus.current) return;
     moveFocus.current = false;
-    (faceDown ? backRef : flipBtnRef).current?.focus({ preventScroll: true });
-  }, [faceDown]);
+    const faceUp = (phase === 'drawing' || phase === 'drawn') && !faceDown;
+    (faceUp ? questionRef : backRef).current?.focus({ preventScroll: true });
+  }, [faceDown, phase]);
 
   const onBackClick = () => {
     if (phase === 'deck') draw();
@@ -141,8 +160,9 @@ export default function PreguntaDelDia({
   return (
     <section class="pdd" aria-label={title}>
       <header class="pdd__header">
-        <h2 class="pdd__title">{title}</h2>
-        {day !== null && <p class="pdd__date">{dateFmt.format(new Date())}</p>}
+        <Heading class="pdd__title">{title}</Heading>
+        {/* Always rendered (blank until the date is known) so its line is reserved and nothing shifts. */}
+        <p class="pdd__date">{day !== null ? dateFmt.format(new Date()) : ' '}</p>
       </header>
 
       <div class="pdd__stage" style={{ '--pdd-deck-layers': layers } as any}>
@@ -180,10 +200,11 @@ export default function PreguntaDelDia({
               class="pdd__face pdd__face--back"
               onClick={onBackClick}
               disabled={phase !== 'deck' && !turnable}
-              aria-label={turnable ? 'Ver la carta de hoy' : 'Sacar la carta de hoy'}
+              // Its name is the visible prompt below, so voice control can use what's on screen.
+              aria-label={phase === 'deck' || turnable ? undefined : 'Carta de hoy'}
               inert={flipped}
             >
-              <span class="pdd__emblem">¿?</span>
+              <span class="pdd__emblem" aria-hidden="true">¿?</span>
               {phase === 'deck' && <span class="pdd__cta">Toca para sacar tu carta</span>}
               {turnable && <span class="pdd__cta">Toca para ver tu carta</span>}
             </button>
@@ -192,7 +213,6 @@ export default function PreguntaDelDia({
               class="pdd__face pdd__face--front"
               aria-hidden={!flipped}
               inert={!flipped}
-              aria-live="polite"
               onClick={(e) => {
                 // Tapping a blank part of the card turns it over; controls and the help text don't.
                 if (phase !== 'drawn' || (e.target as Element).closest('button, .pdd__help')) return;
@@ -206,13 +226,13 @@ export default function PreguntaDelDia({
                     <span class="pdd__chip">{q.category}</span>
                     <span class="pdd__chip pdd__chip--level">{q.level}</span>
                   </div>
-                  <p class="pdd__question" lang="es">
+                  <p class="pdd__question" lang="es" ref={questionRef} tabIndex={-1}>
                     {q.es}
                   </p>
                   <div class="pdd__actions">
                     {canSpeak && (
                       <button type="button" class="pdd__btn" onClick={() => speak(q.es)}>
-                        🔊 Escuchar
+                        <span aria-hidden="true">🔊</span> Escuchar
                       </button>
                     )}
                     <button
@@ -224,7 +244,6 @@ export default function PreguntaDelDia({
                       Ayuda
                     </button>
                     <button
-                      ref={flipBtnRef}
                       type="button"
                       class="pdd__btn pdd__btn--icon"
                       aria-label="Dar la vuelta a la carta"
@@ -257,6 +276,7 @@ export default function PreguntaDelDia({
                       )}
                       {q.starter && (
                         <p class="pdd__starter" lang="es">
+                          <span aria-hidden="true">✍️ </span>
                           {q.starter}
                         </p>
                       )}
@@ -280,8 +300,10 @@ export default function PreguntaDelDia({
           <span>{left === 1 ? '¡Última carta antes de barajar!' : `Quedan ${left} cartas en la baraja`}</span>
         )}
         {streak > 0 && (
-          <span class="pdd__streak" title="Días seguidos">
-            🔥 {streak} {streak === 1 ? 'día' : 'días'}
+          <span class="pdd__streak">
+            <span aria-hidden="true">🔥 </span>
+            <span class="pdd__sr-only">Racha: </span>
+            {streak} {streak === 1 ? 'día' : 'días'}
           </span>
         )}
       </footer>

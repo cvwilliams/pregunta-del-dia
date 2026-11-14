@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    # This job name is the required status check in .github/rulesets/protect-main.json.
+    # This job name (and "lighthouse" below) are required status checks in .github/rulesets/protect-main.json.
     name: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -32,3 +32,41 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+      - name: Save build for the Lighthouse job
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  lighthouse:
+    # Audits the production build; score thresholds are in lighthouserc.json.
+    name: lighthouse
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      # Runs Lighthouse 3 times against dist/ (mobile, throttled) and fails if a
+      # median category score drops below its threshold. Uses the runner's Chrome.
+      - name: Run Lighthouse
+        run: npx --yes @lhci/cli@0.14.0 autorun
+
+      - name: Save Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/reports/
+          retention-days: 14

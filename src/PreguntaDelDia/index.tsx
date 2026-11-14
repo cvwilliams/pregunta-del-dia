@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { questions as defaultQuestions, type Question } from './questions';
+import type { Question } from './questions';
 import { ALL_DECK_ID, ALL_DECK_NAME, cardsInDeck, decks as defaultDecks, type Deck } from './decks';
 import {
   clearTable,
@@ -57,10 +57,12 @@ const DISCARD_FALLBACK_MS = 900;
 /** And for the riffle (2.6s). */
 const SHUFFLE_FALLBACK_MS = 3400;
 
+const NO_QUESTIONS: Question[] = [];
+
 const cartas = (n: number) => `${n} ${n === 1 ? 'carta' : 'cartas'}`;
 
 export default function PreguntaDelDia({
-  questions = defaultQuestions,
+  questions: questionsProp,
   decks = defaultDecks,
   storageKey = 'pregunta-del-dia',
   title = 'Pregunta del día',
@@ -93,6 +95,20 @@ export default function PreguntaDelDia({
   const shuffleRef = useRef<HTMLDivElement>(null);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  // The built-in questions are a large file (about 3,000 cards), so they load on their
+  // own after the deck has painted. Questions passed as a prop are used straight away.
+  const [builtIn, setBuiltIn] = useState<Question[] | null>(null);
+  useEffect(() => {
+    if (questionsProp) return;
+    let live = true;
+    import('./questions').then((m) => live && setBuiltIn(m.questions));
+    return () => {
+      live = false;
+    };
+  }, [questionsProp]);
+  const loadedQuestions = questionsProp ?? builtIn;
+  const questions = loadedQuestions ?? NO_QUESTIONS;
+
   const byId = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions]);
   const allIds = useMemo(() => questions.map((q) => q.id), [questions]);
   // Todas first, then the themed decks; each with the ids of its cards.
@@ -112,8 +128,10 @@ export default function PreguntaDelDia({
     saveState(storageKey, next);
   };
 
-  // Load (or start) the viewer's deck.
+  // Load (or start) the viewer's deck, once the questions are here (loading it against
+  // an empty list would forget every saved card).
   useEffect(() => {
+    if (!loadedQuestions) return;
     let s = loadState(storageKey, allIds, ALL_DECK_ID, cryptoRng);
     if (!allDecks.some((d) => d.id === s.deckId)) s = selectDeck(s, ALL_DECK_ID);
     commit(s);

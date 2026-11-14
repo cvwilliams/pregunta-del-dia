@@ -16,7 +16,7 @@ It runs as an installable web app (PWA) that works offline. The deck is also a s
 - **Listen:** reads the question aloud with your browser's built-in Spanish voice.
 - **Feels like a real deck:** a hand-like draw-and-flip animation, a riffle-and-bridge shuffle, and you can turn the card back over and face up again.
 - **Comfortable to use:** light and dark mode (follows your system setting, with a toggle), full keyboard support, and reduced motion respected.
-- **Questions from beginner to advanced:** levels A1–C1, written in neutral Spanish (where words differ by region, the vocabulary gives both). Growing towards 3,000.
+- **Questions from beginner to advanced:** levels A1–C1, written in neutral Spanish (where words differ by region, the vocabulary gives both). About 3,000 questions across nine decks.
 
 ## Getting started
 

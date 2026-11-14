@@ -14,6 +14,7 @@
   --pdd-muted: light-dark(#4f6678, #9fb4c4);
   --pdd-paper: light-dark(#fffaf2, #0f2b40);
   --pdd-paper-edge: light-dark(#e6dcc8, #234a64);
+  --pdd-control-edge: light-dark(#7f8d99, #5b7c92); /* button outlines: 3:1 against the card */
   --pdd-accent: light-dark(#1b6b4f, #74d1a4);
   --pdd-on-accent: light-dark(#ffffff, #05261a);
   --pdd-focus: #f6eedb; /* focus ring on the navy page */
@@ -348,6 +349,16 @@
   color: var(--pdd-on-accent);
 }
 
+/* Receives focus when the card turns face up, so screen readers read it out.
+   The ring only shows for keyboard users. */
+.pdd__question:focus {
+  outline: none;
+}
+.pdd__question:focus-visible {
+  outline: 2px solid var(--pdd-accent);
+  outline-offset: 6px;
+  border-radius: 6px;
+}
 .pdd__question {
   margin: auto 0;
   font-family: var(--pdd-font-display);
@@ -370,7 +381,7 @@
   font-weight: 600;
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
-  border: 1.5px solid var(--pdd-paper-edge);
+  border: 1.5px solid var(--pdd-control-edge);
   background: transparent;
   color: var(--pdd-text);
   cursor: pointer;
@@ -437,9 +448,6 @@
   margin: 0;
   text-align: center;
 }
-.pdd__starter::before {
-  content: '✍️ ';
-}
 
 @keyframes pdd-fade {
   from { opacity: 0; transform: translateY(4px); }
@@ -480,4 +488,17 @@
   .pdd__card.is-drawing {
     animation: pdd-fade 0.01s;
   }
+}
+
+/* Read by screen readers, not shown. */
+.pdd__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }

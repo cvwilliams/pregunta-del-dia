@@ -1,0 +1,6 @@
+[
+  {"id": "q0013", "es": "¿Adónde fuiste en tus últimas vacaciones?", "en": "Where did you go on your last vacation?", "level": "A2", "category": "Viajes", "vocab": [["la playa", "beach"], ["la montaña", "mountains"], ["me quedé en casa", "I stayed home"]], "starter": "En mis últimas vacaciones fui a…"},
+  {"id": "q0017", "es": "¿Cuál es la última película que viste?", "en": "What is the last movie you saw?", "level": "A2", "category": "Cultura", "vocab": [["me gustó", "I liked it"], ["aburrida", "boring"], ["la recomiendo", "I recommend it"]], "starter": "La última película que vi fue…"},
+  {"id": "q0024", "es": "¿Qué costumbre de otro país te gustaría adoptar?", "en": "What custom from another country would you like to adopt?", "level": "B1", "category": "Cultura", "vocab": [["la siesta", "nap"], ["la sobremesa", "lingering at the table after a meal"], ["me gustaría", "I would like"]], "starter": "Me gustaría adoptar…"},
+  {"id": "q0028", "es": "¿Qué libro o serie le recomendarías a un amigo?", "en": "What book or show would you recommend to a friend?", "level": "B1", "category": "Cultura", "vocab": [["engancharse", "to get hooked"], ["la trama", "plot"], ["el personaje", "character"]], "starter": "Le recomendaría… porque…"}
+]

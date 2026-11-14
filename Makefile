@@ -1,4 +1,4 @@
-.PHONY: dev build test preview icons font
+.PHONY: dev build test stats preview icons font
 
 FONT_URL := https://github.com/google/fonts/raw/main/ofl/bricolagegrotesque/BricolageGrotesque%5Bopsz,wdth,wght%5D.ttf
 
@@ -7,6 +7,8 @@ dev: ; docker compose up dev
 build: ; docker compose run --rm builder
 
 test: ; docker compose run --rm builder sh -c "npm install && npm test"
+
+stats: ; docker compose run --rm builder sh -c "npm run stats --silent"
 
 preview: ; docker compose run --rm --service-ports preview
 

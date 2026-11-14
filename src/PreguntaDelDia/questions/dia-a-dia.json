@@ -1,0 +1,10 @@
+[
+  {"id": "q0003", "es": "¿Tienes mascotas? ¿Cómo se llaman?", "en": "Do you have pets? What are their names?", "level": "A1", "category": "Vida diaria", "vocab": [["el perro", "dog"], ["el gato", "cat"], ["se llama", "its name is"]], "starter": "Tengo un… que se llama…"},
+  {"id": "q0004", "es": "¿Cómo es tu casa?", "en": "What is your house like?", "level": "A1", "category": "Hogar", "vocab": [["grande / pequeña", "big / small"], ["la cocina", "kitchen"], ["el jardín", "garden"]], "starter": "Mi casa es…"},
+  {"id": "q0005", "es": "¿A qué hora te levantas normalmente?", "en": "What time do you normally get up?", "level": "A1", "category": "Rutina", "vocab": [["levantarse", "to get up"], ["temprano", "early"], ["tarde", "late"]], "starter": "Normalmente me levanto a las…"},
+  {"id": "q0006", "es": "¿De qué color es tu ropa hoy?", "en": "What color are your clothes today?", "level": "A1", "category": "Vida diaria", "vocab": [["la camisa", "shirt"], ["los pantalones", "trousers"], ["llevo", "I'm wearing"]], "starter": "Hoy llevo…"},
+  {"id": "q0009", "es": "¿Qué tiempo hace hoy donde estás?", "en": "What's the weather like today where you are?", "level": "A1", "category": "Tiempo", "vocab": [["está nublado", "it's cloudy"], ["llueve", "it's raining"], ["hace sol", "it's sunny"]], "starter": "Hoy hace…"},
+  {"id": "q0011", "es": "¿Qué hiciste ayer por la tarde?", "en": "What did you do yesterday afternoon?", "level": "A2", "category": "Rutina", "vocab": [["fui", "I went"], ["trabajé", "I worked"], ["vi una serie", "I watched a show"]], "starter": "Ayer por la tarde…"},
+  {"id": "q0019", "es": "¿Qué llevas siempre en tu mochila o bolso?", "en": "What do you always carry in your backpack or bag?", "level": "A2", "category": "Vida diaria", "vocab": [["las llaves", "keys"], ["la cartera", "wallet"], ["el cargador", "charger"]], "starter": "Siempre llevo…"},
+  {"id": "q0020", "es": "¿Cómo llegas al trabajo o a clase?", "en": "How do you get to work or class?", "level": "A2", "category": "Rutina", "vocab": [["a pie", "on foot"], ["en metro", "by subway"], ["tardo", "it takes me"]], "starter": "Voy… y tardo…"}
+]

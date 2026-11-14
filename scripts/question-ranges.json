@@ -1,0 +1,12 @@
+{
+  "_comment": "Each deck's block of ids for new cards, so decks can be written in parallel without clashing. Cards q0001–q0193 came before these ranges and stay as they are.",
+  "dia-a-dia": [1000, 1399],
+  "comida": [1400, 1799],
+  "sobre-ti": [1800, 2199],
+  "relaciones": [2200, 2599],
+  "trabajo": [2600, 2999],
+  "tiempo-libre": [3000, 3399],
+  "cultura": [3400, 3799],
+  "opiniones": [3800, 4199],
+  "imagina": [4200, 4599]
+}

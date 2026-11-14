@@ -1,0 +1,5 @@
+[
+  {"id": "q0001", "es": "¿Qué desayunaste hoy?", "en": "What did you have for breakfast today?", "level": "A1", "category": "Comida", "vocab": [["el pan tostado", "toast"], ["los huevos", "eggs"], ["nada", "nothing"]], "starter": "Hoy desayuné…"},
+  {"id": "q0010", "es": "¿Cuál es tu comida favorita?", "en": "What is your favorite food?", "level": "A1", "category": "Comida", "vocab": [["me encanta", "I love"], ["picante", "spicy"], ["dulce", "sweet"]], "starter": "Mi comida favorita es…"},
+  {"id": "q0018", "es": "¿Sabes cocinar? ¿Cuál es tu especialidad?", "en": "Can you cook? What is your specialty?", "level": "A2", "category": "Comida", "vocab": [["la receta", "recipe"], ["al horno", "baked"], ["me sale bien", "I make it well"]], "starter": "Sí, sé cocinar… Mi especialidad es…"}
+]

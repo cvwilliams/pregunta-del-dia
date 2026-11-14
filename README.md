@@ -8,7 +8,7 @@ It runs as an installable web app (PWA) that works offline. The deck is also a s
 
 ## Features
 
-- **Themed decks:** Día a día, Sobre ti, Opiniones y debate, Imagina and Cultura y viajes, plus **Todas**, which combines them. Pick one from the row of card packs along the bottom; each deck has its own card-back colour (Todas keeps the green). A card drawn from any deck is gone from every deck it's in until you put it back.
+- **Themed decks:** Día a día, Comida, Sobre ti, Relaciones, Trabajo y estudios, Tiempo libre, Cultura y viajes, Opiniones y debate and Imagina, plus **Todas**, which combines them. Pick one from the row of card packs along the bottom; each deck has its own card-back colour (Todas keeps the green). A card drawn from any deck is gone from every deck it's in until you put it back.
 - **Your own shuffled deck.** Draw as many cards as you like, shuffle whenever you like, and every card comes up once before you start again.
 - **History:** swipe back through every card you've drawn, newest first, as full cards with their help. Put any card back into the deck, or all of them at once. When a deck runs out, one tap puts its cards back and shuffles.
 - **Streak:** counts the days in a row you've drawn a card. Everything is stored in your browser only; there's no account and no server.
@@ -16,7 +16,7 @@ It runs as an installable web app (PWA) that works offline. The deck is also a s
 - **Listen:** reads the question aloud with your browser's built-in Spanish voice.
 - **Feels like a real deck:** a hand-like draw-and-flip animation, a riffle-and-bridge shuffle, and you can turn the card back over and face up again.
 - **Comfortable to use:** light and dark mode (follows your system setting, with a toggle), full keyboard support, and reduced motion respected.
-- **Questions from beginner to advanced:** 43 questions across levels A1–C1.
+- **Questions from beginner to advanced:** levels A1–C1, written in neutral Spanish (where words differ by region, the vocabulary gives both). Growing towards 3,000.
 
 ## Getting started
 
@@ -58,19 +58,25 @@ hashed files in `/assets/` are cached forever.
 
 ## Writing your own deck
 
-The questions live in [`src/PreguntaDelDia/questions.ts`](src/PreguntaDelDia/questions.ts). Each card looks like this:
+The questions live in [`src/PreguntaDelDia/questions/`](src/PreguntaDelDia/questions), one JSON file per deck, one card per line. Each card looks like this:
 
-```ts
+```json
 {
-  id: 'q0044',                // unique and permanent; give new cards the next number
-  es: '¿Qué te hace reír siempre?',
-  en: 'What always makes you laugh?',
-  level: 'B1',                // A1 | A2 | B1 | B2 | C1
-  category: 'Personalidad',
-  vocab: [['me hace gracia', 'I find it funny'], ['el chiste', 'joke']], // optional
-  starter: 'Siempre me hace reír…',                                     // optional
+  "id": "q0032",
+  "es": "¿Qué te hace reír siempre?",
+  "en": "What always makes you laugh?",
+  "level": "B1",
+  "category": "Personalidad",
+  "vocab": [["me hace gracia", "I find it funny"], ["el chiste", "joke"]],
+  "starter": "Siempre me hace reír…"
 }
 ```
+
+- `id` is unique and permanent. Each deck takes new ids from its own range in [`scripts/question-ranges.json`](scripts/question-ranges.json); `npm run stats` (or `make stats`) prints the next one for each deck, along with how many cards each deck has at each level against the targets.
+- To add cards in bulk, see [`docs/writing-questions.md`](docs/writing-questions.md): the writing standard, and `scripts/add_questions.py`, which appends a batch with the right ids.
+- `level` is one of A1, A2, B1, B2, C1. `category` must be one of its deck's categories.
+- `vocab` has 2–4 pairs and `starter` is required for the built-in deck (both are optional in your own `questions`).
+- Questions are punctuated `¿…?` (the `¿` can open mid-sentence: "Si pudieras…, ¿cuál…?"); prompts such as "Cuéntame…" end in a full stop.
 
 Edit the list, or pass your own with the `questions` prop. Each person's deck is saved by card `id`, so you can add, remove and edit questions freely: new cards are shuffled into everyone's deck, and removed ones disappear from it. Never reuse or change an id, or someone's history will point at the wrong card.
 
@@ -82,7 +88,7 @@ Decks are defined in [`src/PreguntaDelDia/decks.ts`](src/PreguntaDelDia/decks.ts
 
 `back` is the deck's card-back colour, the light and dark ends of the gradient behind the shared pattern. It's optional; without it the deck uses the theme's `--pdd-back-1` and `--pdd-back-2`, as Todas does.
 
-Every category must belong to exactly one deck. `npm test` checks this, along with unique ids, required fields, duplicate questions, and that the cream text on each card back has at least 4.5:1 contrast. Pass your own decks with the `decks` prop; **Todas** is always added.
+Every category must belong to exactly one deck, and each deck's cards go in the file named after its id. `npm test` checks all of this, along with ids, fields, punctuation, duplicates, and that the cream text on each card back has at least 4.5:1 contrast. Pass your own decks with the `decks` prop; **Todas** is always added.
 
 ## Using the component in your own site
 
@@ -170,7 +176,8 @@ src/PreguntaDelDia/     the reusable component
   DeckTray.tsx          the row of deck packs along the bottom
   CardFace.tsx          a card's face: question, buttons and help (table and history)
   History.tsx           the history: drawn cards to swipe through and put back
-  questions.ts          the questions
+  questions/            the questions, one JSON file per deck
+  questions.ts          combines them; the Question type
   decks.ts              themed decks (lists of categories)
   deck.ts               drawing, shuffling and returning cards (pure functions)
   storage.ts            saving the deck (localStorage), streak
@@ -185,6 +192,8 @@ src/assets/fonts/       self-hosted font subset and its licence
 public/icons/           app icons
 scripts/make_icons.py   icon generator (run with `make icons`)
 scripts/subset_font.py  font subsetter (run with `make font`)
+scripts/question-stats.mjs  progress per deck and level (`make stats`)
+scripts/add_questions.py    appends a batch of cards to a deck (see docs/writing-questions.md)
 vite.config.ts          Vite and PWA setup
 firebase.json           Firebase Hosting site and caching rules
 Dockerfile, compose.yaml, Makefile   Docker-based dev and build

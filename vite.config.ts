@@ -3,6 +3,9 @@ import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // The questions are large JSON files: load them as JSON.parse("…"), which browsers
+  // parse much faster than the equivalent object literals.
+  json: { stringify: true },
   plugins: [
     preact(),
     VitePWA({

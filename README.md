@@ -10,6 +10,7 @@ It runs as an installable web app (PWA) that works offline. The deck is also a s
 
 - **Themed decks:** Día a día, Comida, Sobre ti, Relaciones, Trabajo y estudios, Tiempo libre, Cultura y viajes, Opiniones y debate and Imagina, plus **Todas**, which combines them. Pick one from the row of card packs along the bottom; each deck has its own card-back colour (Todas keeps the green). A card drawn from any deck is gone from every deck it's in until you put it back.
 - **Your own shuffled deck.** Draw as many cards as you like, shuffle whenever you like, and every card comes up once before you start again.
+- **Swipe:** pick the card up and throw it away, either way, for the next one: it follows your finger, tilts like a held card and flies off the way you flick it (or tap "Otra carta", or press ← / →). In the history, swipe a card up to put it back. Taps and scrolling work as before (with a mouse, double-click to select text), and every swipe has a button too.
 - **History:** swipe back through every card you've drawn, newest first, as full cards with their help. Put any card back into the deck, or all of them at once. When a deck runs out, one tap puts its cards back and shuffles.
 - **Streak:** counts the days in a row you've drawn a card. Everything is stored in your browser only; there's no account and no server.
 - **Help when you need it:** an English translation, key vocabulary and a sentence starter, shown only when you ask.
@@ -182,6 +183,7 @@ src/PreguntaDelDia/     the reusable component
   deck.ts               drawing, shuffling and returning cards (pure functions)
   storage.ts            saving the deck (localStorage), streak
   shuffle.ts            the riffle-and-bridge animation
+  swipe.ts              dragging and throwing cards (taps and scrolling left alone)
   daily.ts              local day numbers (for the streak)
   styles.css            styles, themed with CSS custom properties
 src/main.tsx            entry point for the standalone app

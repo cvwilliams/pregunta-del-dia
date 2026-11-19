@@ -26,7 +26,7 @@ interface Props {
 export default function CardFace({ q, showHelp, onToggleHelp, questionRef, children }: Props) {
   const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window;
   return (
-    <>
+    <div class="pdd__paper-body">
       <div class="pdd__meta">
         <span class="pdd__chip">{q.category}</span>
         <span class="pdd__chip pdd__chip--level">{q.level}</span>
@@ -68,6 +68,6 @@ export default function CardFace({ q, showHelp, onToggleHelp, questionRef, child
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

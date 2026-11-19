@@ -17,6 +17,7 @@ import { localDayNumber } from './daily';
 import { afterPaint, prefersReducedMotion } from './motion';
 import { SHUFFLE_CARDS, runShuffle } from './shuffle';
 import { loadState, saveState, streakFor } from './storage';
+import { springBack, throwPath, useSwipe, type Drag } from './swipe';
 import DeckTray from './DeckTray';
 import History from './History';
 import CardFace from './CardFace';
@@ -59,6 +60,9 @@ const SHUFFLE_FALLBACK_MS = 3400;
 
 const NO_QUESTIONS: Question[] = [];
 
+/** What a throw sets on the card for its discard animation (see styles.css). */
+const THROW_VARS = ['--pdd-throw-from', '--pdd-throw-to', '--pdd-throw-ms', '--pdd-throw-ease', '--pdd-throw-opacity'];
+
 const cartas = (n: number) => `${n} ${n === 1 ? 'carta' : 'cartas'}`;
 
 export default function PreguntaDelDia({
@@ -86,6 +90,7 @@ export default function PreguntaDelDia({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
+  const cardRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const questionRef = useRef<HTMLParagraphElement>(null);
   const emptyRef = useRef<HTMLButtonElement>(null);
@@ -181,6 +186,13 @@ export default function PreguntaDelDia({
   // Clear the face-up card off the table (it stays in the history).
   const putAway = () => {
     if (stateRef.current) commit(clearTable(stateRef.current));
+    // Drop anything a swipe left on the card, so the next one starts on the deck.
+    const el = cardRef.current;
+    if (el) {
+      el.style.transform = '';
+      for (const v of THROW_VARS) el.style.removeProperty(v);
+    }
+    stageRef.current?.style.removeProperty('--pdd-swipe');
     setFaceDown(false);
     setShowHelp(false);
     setInstant(true);
@@ -309,6 +321,76 @@ export default function PreguntaDelDia({
     if (!prefersReducedMotion()) setShuffling(true);
   };
 
+  // Can a touch pick the card up any way? Only if nothing needs a vertical drag to
+  // scroll: not the page (it usually fits) and not the card's own text (long help).
+  // Otherwise a touch has to start sideways, and up and down stay a scroll. Worked
+  // out ahead of time, because the browser reads touch-action as the touch starts.
+  const [roomy, setRoomy] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      const doc = document.scrollingElement;
+      const paper = cardRef.current?.querySelector<HTMLElement>('.pdd__paper-body');
+      const pageScrolls = !!doc && doc.scrollHeight > innerHeight + 1;
+      const cardScrolls = !faceDown && !!paper && paper.scrollHeight > paper.clientHeight + 1;
+      setRoomy(!pageScrolls && !cardScrolls);
+    };
+    const cancel = afterPaint(check);
+    addEventListener('resize', check);
+    return () => {
+      cancel();
+      removeEventListener('resize', check);
+    };
+  }, [showHelp, phase, q, faceDown]);
+
+  // Throw the card off the table and draw the next one: the same as "Otra carta", but
+  // it leaves along `to` (a transform) in `ms`, starting from wherever it is now.
+  const throwCard = (el: HTMLElement, to: string, ms: number) => {
+    el.style.setProperty('--pdd-throw-from', el.style.transform || 'none');
+    el.style.setProperty('--pdd-throw-to', to);
+    el.style.setProperty('--pdd-throw-ms', `${ms}ms`);
+    // Thrown, not slid: it keeps its speed (no ease-in) and leaves the screen whole.
+    el.style.setProperty('--pdd-throw-ease', 'cubic-bezier(0.3, 0.6, 0.6, 1)');
+    el.style.setProperty('--pdd-throw-opacity', '1');
+    stageRef.current?.style.setProperty('--pdd-swipe', '1');
+    another();
+  };
+
+  // Tilts the way the card's being pulled, like a card held at that point: the other
+  // way round if it was picked up by the bottom half.
+  const tilt = (m: Drag) => Math.max(-20, Math.min(20, (m.dx / m.width) * 18 * (m.grabTop ? 1 : -1)));
+
+  // Pick up the card on the table and throw it away, either way, for another. It
+  // follows the finger (or mouse) freely, and the next card rises underneath. Taps
+  // still turn it over.
+  useSwipe(stageRef, {
+    axis: 'x',
+    handle: '.pdd__card',
+    enabled: () => phase === 'drawn' && !shuffling,
+    anyStart: (_, e) => e.pointerType !== 'touch' || roomy,
+    onMove: (el, m) => {
+      el.style.transform = `translate(${m.dx}px, ${m.dy}px) rotate(${tilt(m)}deg)`;
+      stageRef.current?.style.setProperty('--pdd-swipe', String(m.progress));
+    },
+    onRelease: (el, dir, m) => {
+      if (!dir) {
+        stageRef.current?.style.removeProperty('--pdd-swipe');
+        return springBack(el, prefersReducedMotion());
+      }
+      const t = throwPath(m.dx, m.dy, m.vx, m.vy, dir, Math.max(innerWidth, m.width * 2) + m.width);
+      const r = tilt(m);
+      throwCard(el, `translate(${t.x}px, ${t.y}px) rotate(${r + (Math.sign(r) || dir) * 20}deg)`, t.ms);
+    },
+  });
+
+  // With the keyboard: ← and → throw the card that way while it has focus.
+  const onCardKey = (e: KeyboardEvent) => {
+    if (phase !== 'drawn' || shuffling || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    if ((e.target as Element).closest('input, textarea, select')) return;
+    e.preventDefault();
+    const dir = e.key === 'ArrowLeft' ? -1 : 1;
+    throwCard(e.currentTarget as HTMLElement, `translate(${dir * 140}%, -6%) rotate(${dir * 24}deg)`, 380);
+  };
+
   const onBackClick = () => {
     if (canDraw) draw();
     else if (phase === 'drawn' && faceDown) turnOver(false);
@@ -395,8 +477,12 @@ export default function PreguntaDelDia({
             )}
 
             <div
+              ref={cardRef}
+              onKeyDown={onCardKey}
               class={[
                 'pdd__card',
+                phase === 'drawn' && 'is-swipeable',
+                roomy && 'is-free',
                 flipped && 'is-flipped',
                 phase === 'drawing' && 'is-drawing',
                 phase === 'discarding' && 'is-discarding',

@@ -3,6 +3,7 @@ import { localDayNumber } from './daily';
 import type { Question } from './questions';
 import CardFace from './CardFace';
 import { prefersReducedMotion } from './motion';
+import { springBack, useSwipe } from './swipe';
 
 export interface HistoryItem {
   at: number;
@@ -110,6 +111,38 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
     // The next older card slides into this place; past the end, step back one.
     if (current >= count - 1 && current > 0) setIndex(current - 1);
   };
+
+  // Swipe the card in view up to put it back in the deck. Sideways still moves between
+  // cards, and down only gives a little (it never closes the dialog). With the help
+  // open the card scrolls instead, so it's left alone then.
+  useSwipe(ref, {
+    axis: 'y',
+    handle: '.pdd__history-card:not([inert])',
+    allow: (dir) => dir === -1,
+    enabled: (el) => !confirming && !el.querySelector('.pdd__help'),
+    onMove: (el, { d, size }) => {
+      el.style.transform = `translateY(${d}px)`;
+      el.style.opacity = d < 0 ? String(Math.max(0.3, 1 + (d / size) * 0.7)) : '';
+    },
+    onRelease: (el, dir) => {
+      const reduce = prefersReducedMotion();
+      if (!dir) return springBack(el, reduce);
+      if (reduce) return returnCurrent();
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        returnCurrent();
+      };
+      // One keyframe: it starts from wherever the card was let go.
+      el.animate([{ transform: 'translateY(-120%)', opacity: 0 }], {
+        duration: 220,
+        easing: 'ease-in',
+        fill: 'forwards',
+      }).finished.then(finish, finish);
+      setTimeout(finish, 500); // in case the animation never finishes (hidden tab)
+    },
+  });
 
   return (
     <dialog

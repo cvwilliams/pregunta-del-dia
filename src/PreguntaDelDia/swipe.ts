@@ -219,6 +219,22 @@ export function useSwipe(containerRef: RefObject<HTMLElement>, options: SwipeOpt
       if (press && e.detail < 2 && !(e.target as Element).closest('button, a, input, textarea, select')) e.preventDefault();
     };
 
+    // iOS decides a touch is a scroll (or a pull-to-refresh) on its first movement,
+    // before the drag above has passed TAP_SLOP, and it doesn't reliably honour
+    // touch-action for pull-to-refresh. Cancelling touchmove is what it does obey. So
+    // while a finger is on a card: if it can be picked up any way, the page never gets
+    // the touch; otherwise only a touch heading along the axis is kept from the page,
+    // and one heading the other way is left to scroll. Touches elsewhere are untouched.
+    const touchmove = (e: TouchEvent) => {
+      if (!press || e.touches.length !== 1 || !e.cancelable) return;
+      if (press.dragging || press.anyStart) return e.preventDefault();
+      const t = e.touches[0];
+      const ax = Math.abs(t.clientX - press.x);
+      const ay = Math.abs(t.clientY - press.y);
+      const [a, b] = opts.current.axis === 'x' ? [ax, ay] : [ay, ax];
+      if (a > b) e.preventDefault();
+    };
+
     const click = (e: MouseEvent) => {
       if (!swallowClick) return;
       swallowClick = false;
@@ -232,7 +248,10 @@ export function useSwipe(containerRef: RefObject<HTMLElement>, options: SwipeOpt
     root.addEventListener('pointercancel', onCancel);
     root.addEventListener('mousedown', mousedown);
     root.addEventListener('click', click, true);
+    // Not passive, so it can cancel the scroll.
+    root.addEventListener('touchmove', touchmove, { passive: false });
     return () => {
+      root.removeEventListener('touchmove', touchmove);
       root.removeEventListener('pointerdown', down);
       root.removeEventListener('pointermove', move);
       root.removeEventListener('pointerup', onUp);

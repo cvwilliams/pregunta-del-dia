@@ -9,8 +9,11 @@ import {
   remaining,
   returnAll,
   returnCard,
+  returnedCount,
   selectDeck,
   shuffle as shuffleDeck,
+  toggleSaved,
+  undoReturn,
   type DeckState,
 } from './deck';
 import { localDayNumber } from './daily';
@@ -131,12 +134,26 @@ export default function PreguntaDelDia({
       })),
     [decks, questions],
   );
+  // Each card's own deck colour, for the history list (Todas has none; cards whose
+  // deck has none use the theme's green).
+  const backOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of allDecks) if (d.back) for (const id of d.cards) if (!m.has(id)) m.set(id, d.back[0]);
+    return m;
+  }, [allDecks]);
   const cardsOf = (id: string) => allDecks.find((d) => d.id === id)?.cards ?? new Set<string>();
 
-  const commit = (next: DeckState) => {
+  // The last put-back from the history, while it can still be undone: the state from
+  // just before it, and what to call it. Any other change ends the chance to undo.
+  const [undo, setUndo] = useState<{ before: DeckState; label: string } | null>(null);
+
+  // Starring a card keeps the undo (undoReturn leaves saved cards as they are);
+  // anything else ends it.
+  const commit = (next: DeckState, keepUndo = false) => {
     stateRef.current = next;
     setState(next);
     saveState(storageKey, next);
+    if (!keepUndo) setUndo(null);
   };
 
   // Load (or start) the viewer's deck, once the questions are here (loading it against
@@ -307,7 +324,7 @@ export default function PreguntaDelDia({
     const wasCurrent = s.current === id;
     commit(returnCard(s, id, cryptoRng));
     if (wasCurrent) putAway();
-    setAnnouncement('Carta devuelta a la baraja');
+    setUndo({ before: s, label: 'Carta devuelta a la baraja' });
   };
 
   const putAllBack = (deck: string, focusDeck = false) => {
@@ -317,8 +334,30 @@ export default function PreguntaDelDia({
     if (focusDeck) moveFocus.current = true;
     commit(returnAll(s, cardsOf(deck), cryptoRng));
     putAway();
-    setAnnouncement('Cartas devueltas y barajadas');
     if (!prefersReducedMotion()) setShuffling(true);
+    if (focusDeck) setAnnouncement('Cartas devueltas y barajadas');
+    else {
+      const n = stateRef.current ? returnedCount(s, stateRef.current) : 0;
+      setUndo({ before: s, label: n === 1 ? 'Carta devuelta a la baraja' : `${n} cartas devueltas a la baraja` });
+    }
+  };
+
+  // Take the last put-back back: the deck goes back to just before it, including the
+  // card on the table if it was that one.
+  const undoPutBack = () => {
+    const s = stateRef.current;
+    if (!undo || !s) return;
+    commit(undoReturn(s, undo.before));
+    if (undo.before.current) {
+      setFaceDown(false);
+      setInstant(true);
+      setPhase('drawn');
+    }
+  };
+
+  const toggleSave = (id: string) => {
+    const s = stateRef.current;
+    if (s) commit(toggleSaved(s, id), true);
   };
 
   // Can a touch pick the card up any way? Only if nothing needs a vertical drag to
@@ -405,13 +444,14 @@ export default function PreguntaDelDia({
   // them, and Todas (which has no colours of its own) would turn the active colour.
   const back = allDecks.find((d) => d.id === deckId)?.back;
 
+  const savedIds = new Set(state?.saved);
   const historyItems = state
     ? state.history
         .slice()
         .reverse()
         .flatMap((h) => {
           const hq = byId.get(h.id);
-          return hq ? [{ at: h.at, q: hq }] : [];
+          return hq ? [{ at: h.at, q: hq, saved: savedIds.has(hq.id), back: backOf.get(hq.id) }] : [];
         })
     : [];
 
@@ -530,6 +570,8 @@ export default function PreguntaDelDia({
                       showHelp={showHelp}
                       onToggleHelp={() => setShowHelp((v) => !v)}
                       questionRef={questionRef}
+                      saved={state?.saved.includes(q.id)}
+                      onToggleSaved={() => toggleSave(q.id)}
                     >
                       <button
                         type="button"
@@ -614,12 +656,16 @@ export default function PreguntaDelDia({
         today={today}
         onClose={() => {
           setHistoryOpen(false);
+          setUndo(null);
           // Back to the button that opened it (the browser only does this if the
           // previously focused element is still focusable).
           historyBtnRef.current?.focus();
         }}
         onReturn={putBack}
         onReturnAll={() => putAllBack(ALL_DECK_ID)}
+        onToggleSaved={toggleSave}
+        undoLabel={undo?.label ?? null}
+        onUndo={undoPutBack}
       />
     </section>
   );

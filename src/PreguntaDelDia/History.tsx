@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { localDayNumber } from './daily';
+import { dayLabel, groupByDay } from './daily';
 import type { Question } from './questions';
-import CardFace from './CardFace';
-import { prefersReducedMotion } from './motion';
+import CardFace, { StarIcon } from './CardFace';
+import { afterPaint, prefersReducedMotion } from './motion';
 import { springBack, useSwipe } from './swipe';
 
 export interface HistoryItem {
   at: number;
   q: Question;
+  saved: boolean;
+  /** Its deck's card-back colour, for the list; the theme's when left out. */
+  back?: string;
 }
 
 interface Props {
@@ -18,37 +21,54 @@ interface Props {
   onClose: () => void;
   onReturn: (id: string) => void;
   onReturnAll: () => void;
+  onToggleSaved: (id: string) => void;
+  /** What the last return did ("Carta devuelta a la baraja"), while it can be undone. */
+  undoLabel: string | null;
+  onUndo: () => void;
 }
 
-const dateFmt = new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long' });
-
-function dayLabel(at: number, today: number): string {
-  const day = localDayNumber(new Date(at));
-  if (day === today) return 'Hoy';
-  if (day === today - 1) return 'Ayer';
-  const label = dateFmt.format(new Date(at));
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
+type View = 'cards' | 'list';
 
 /**
- * The cards you've drawn, newest first, as full cards you swipe (or arrow) through.
- * Each can be read again, with its help, and put back into the deck.
+ * The cards you've drawn, newest first: as full cards you swipe (or arrow) through,
+ * or as a list to scan and jump from. Each can be read again with its help, saved
+ * (★) to come back to, and put back into the deck; a return can be undone.
  *
  * A native modal <dialog>: focus stays inside while it's open and Escape closes it.
- * Only the card in view is interactive (the rest are inert), so Tab doesn't wander
- * off-screen.
+ * In the card view only the card in view is interactive (the rest are inert), so
+ * Tab doesn't wander off-screen.
  */
-export default function History({ open, items, today, onClose, onReturn, onReturnAll }: Props) {
+export default function History({
+  open,
+  items: allItems,
+  today,
+  onClose,
+  onReturn,
+  onReturnAll,
+  onToggleSaved,
+  undoLabel,
+  onUndo,
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<View>('cards');
+  const [onlySaved, setOnlySaved] = useState(false);
   const [index, setIndex] = useState(0);
   const [helpFor, setHelpFor] = useState<string | null>(null);
   // "Devolver todas" asks first, in the page: the browser's confirm() is silently
   // blocked in some embedded browsers and installed apps.
   const [confirming, setConfirming] = useState(false);
+  // The card in view has more text than fits (the help, or a short screen), so a
+  // vertical drag scrolls it instead of putting it back.
+  const [scrolls, setScrolls] = useState(false);
   const allRef = useRef<HTMLButtonElement>(null);
   const yesRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const returnRef = useRef<HTMLButtonElement>(null);
+
+  const savedCount = allItems.filter((it) => it.saved).length;
+  const items = onlySaved ? allItems.filter((it) => it.saved) : allItems;
   const count = items.length;
   const current = Math.min(index, Math.max(0, count - 1));
   const item = items[current];
@@ -58,11 +78,13 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
-      // Always open on the newest card.
+      // Always open on the newest card, unfiltered (the view you last used is kept).
       setIndex(0);
+      setOnlySaved(false);
       setHelpFor(null);
       setConfirming(false);
       trackRef.current?.scrollTo({ left: 0 });
+      listRef.current?.scrollTo({ top: 0 });
     }
     if (!open && dialog.open) dialog.close();
   }, [open]);
@@ -89,6 +111,27 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
     if (i >= 0 && i < count) setIndex(i);
   };
 
+  // The track is new each time the card view comes back (from the list, or a new
+  // filter): put the chosen card in the middle straight away.
+  useEffect(() => {
+    if (view === 'cards') trackRef.current?.scrollTo({ left: current * stride() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, onlySaved]);
+
+  useEffect(() => {
+    if (!open || view !== 'cards') return;
+    const check = () => {
+      const body = trackRef.current?.querySelector<HTMLElement>('.pdd__history-card:not([inert]) .pdd__paper-body');
+      setScrolls(!!body && body.scrollHeight > body.clientHeight + 1);
+    };
+    const cancel = afterPaint(check);
+    addEventListener('resize', check);
+    return () => {
+      cancel();
+      removeEventListener('resize', check);
+    };
+  }, [open, view, current, helpFor, count]);
+
   useEffect(() => {
     if (confirming) yesRef.current?.focus();
   }, [confirming]);
@@ -112,14 +155,40 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
     if (current >= count - 1 && current > 0) setIndex(current - 1);
   };
 
+  const undo = () => {
+    onUndo();
+    // The card comes back where it was; land on what's showing.
+    setIndex(current);
+    afterPaint(() => (view === 'cards' ? returnRef.current : listRef.current)?.focus());
+  };
+
+  const showView = (v: View) => {
+    setView(v);
+    setHelpFor(null);
+  };
+
+  const filterSaved = (on: boolean) => {
+    setOnlySaved(on);
+    setIndex(0);
+    setHelpFor(null);
+    listRef.current?.scrollTo({ top: 0 });
+  };
+
+  // From the list, open that card in the card view.
+  const openCard = (i: number) => {
+    setIndex(i);
+    showView('cards');
+    afterPaint(() => returnRef.current?.focus());
+  };
+
   // Swipe the card in view up to put it back in the deck. Sideways still moves between
-  // cards, and down only gives a little (it never closes the dialog). With the help
-  // open the card scrolls instead, so it's left alone then.
+  // cards, and down only gives a little (it never closes the dialog). When the card's
+  // text scrolls, up and down scroll it instead, so it's left alone then.
   useSwipe(ref, {
     axis: 'y',
     handle: '.pdd__history-card:not([inert])',
     allow: (dir) => dir === -1,
-    enabled: (el) => !confirming && !el.querySelector('.pdd__help'),
+    enabled: (el) => !confirming && !el.classList.contains('is-scrollable'),
     onMove: (el, { d, size }) => {
       el.style.transform = `translateY(${d}px)`;
       el.style.opacity = d < 0 ? String(Math.max(0.3, 1 + (d / size) * 0.7)) : '';
@@ -144,6 +213,8 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
     },
   });
 
+  const total = allItems.length;
+
   return (
     <dialog
       ref={ref}
@@ -157,8 +228,11 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
         cancelAll();
       }}
       onKeyDown={(e) => {
+        if (view !== 'cards' || (e.target as Element).closest('.pdd__history-bar, .pdd__history-undo')) return;
         if (e.key === 'ArrowLeft') go(current - 1);
         else if (e.key === 'ArrowRight') go(current + 1);
+        else if (e.key === 'Home') go(0);
+        else if (e.key === 'End') go(count - 1);
         else return;
         e.preventDefault();
       }}
@@ -167,7 +241,7 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
         <h2 id="pdd-history-title" class="pdd__history-title">
           Historial
         </h2>
-        {count > 0 && (
+        {total > 0 && (
           <button
             ref={allRef}
             type="button"
@@ -186,10 +260,10 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
         </button>
       </header>
 
-      {confirming && count > 0 && (
+      {confirming && total > 0 && (
         <div id="pdd-history-confirm" class="pdd__history-confirm" role="group" aria-labelledby="pdd-history-confirm-q">
           <p id="pdd-history-confirm-q">
-            ¿Devolver {count === 1 ? 'la carta' : `las ${count} cartas`} a la baraja?
+            ¿Devolver {total === 1 ? 'la carta' : `las ${total} cartas`} a la baraja?
           </p>
           <button type="button" class="pdd__tool" onClick={cancelAll}>
             Cancelar
@@ -200,8 +274,74 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
         </div>
       )}
 
-      {count === 0 ? (
+      {total > 0 && (
+        <div class="pdd__history-bar">
+          <div class="pdd__segmented" role="group" aria-label="Ver como">
+            <button type="button" aria-pressed={view === 'cards'} onClick={() => showView('cards')}>
+              Cartas
+            </button>
+            <button type="button" aria-pressed={view === 'list'} onClick={() => showView('list')}>
+              Lista
+            </button>
+          </div>
+          <button
+            type="button"
+            class="pdd__tool pdd__filter"
+            aria-pressed={onlySaved}
+            onClick={() => filterSaved(!onlySaved)}
+          >
+            <StarIcon filled={onlySaved} />
+            Guardadas
+            <span class="pdd__tool-count">{savedCount}</span>
+          </button>
+        </div>
+      )}
+
+      {total === 0 ? (
         <p class="pdd__history-empty">Aún no has sacado ninguna carta.</p>
+      ) : count === 0 ? (
+        <p class="pdd__history-empty">
+          Aún no has guardado ninguna carta.
+          <br />
+          Toca <StarIcon /> en una carta para guardarla.
+        </p>
+      ) : view === 'list' ? (
+        <div class="pdd__history-list" ref={listRef} tabIndex={-1} aria-label={`${count} ${count === 1 ? 'carta' : 'cartas'}`}>
+          {groupByDay(items, (it) => it.at, today).map((g) => (
+            <section key={g.day} class="pdd__history-day">
+              <h3>{g.label}</h3>
+              <ul>
+                {g.rows.map(({ item: it, index: i }) => (
+                  <li
+                    key={it.q.id}
+                    class="pdd__history-row"
+                    style={it.back ? { '--pdd-row-back': it.back } : undefined}
+                  >
+                    <button type="button" class="pdd__history-open" onClick={() => openCard(i)}>
+                      <span class="pdd__history-q" id={`pdd-hq-${it.q.id}`} lang="es">
+                        {it.q.es}
+                      </span>
+                      <span class="pdd__history-meta">
+                        {it.q.category} · {it.q.level}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="pdd__star"
+                      aria-pressed={it.saved}
+                      aria-label="Guardar"
+                      aria-describedby={`pdd-hq-${it.q.id}`}
+                      title={it.saved ? 'Quitar de guardadas' : 'Guardar'}
+                      onClick={() => onToggleSaved(it.q.id)}
+                    >
+                      <StarIcon filled={it.saved} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       ) : (
         <>
           <p class="pdd__history-where" aria-live="polite">
@@ -215,7 +355,7 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
             {items.map((it, i) => (
               <article
                 key={it.q.id}
-                class="pdd__paper pdd__history-card"
+                class={i === current && scrolls ? 'pdd__paper pdd__history-card is-scrollable' : 'pdd__paper pdd__history-card'}
                 aria-roledescription="carta"
                 aria-label={`${i + 1} de ${count}`}
                 inert={i !== current}
@@ -224,6 +364,8 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
                   q={it.q}
                   showHelp={helpFor === it.q.id}
                   onToggleHelp={() => setHelpFor((h) => (h === it.q.id ? null : it.q.id))}
+                  saved={it.saved}
+                  onToggleSaved={() => onToggleSaved(it.q.id)}
                 />
               </article>
             ))}
@@ -241,7 +383,7 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </button>
-            <button type="button" class="pdd__tool pdd__tool--primary" onClick={returnCurrent}>
+            <button ref={returnRef} type="button" class="pdd__tool pdd__tool--primary" onClick={returnCurrent}>
               Devolver a la baraja
             </button>
             <button
@@ -258,6 +400,19 @@ export default function History({ open, items, today, onClose, onReturn, onRetur
           </div>
         </>
       )}
+
+      {/* After putting cards back: say so, with a way to take it back. It stays until
+          something else changes or the history closes, so there's no rush. */}
+      <div class="pdd__history-undo" role="status">
+        {undoLabel && (
+          <>
+            <span>{undoLabel}</span>
+            <button type="button" class="pdd__undo-btn" onClick={undo}>
+              Deshacer
+            </button>
+          </>
+        )}
+      </div>
     </dialog>
   );
 }

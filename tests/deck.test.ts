@@ -8,9 +8,12 @@ import {
   remaining,
   returnAll,
   returnCard,
+  returnedCount,
   selectDeck,
   shuffle,
   sync,
+  toggleSaved,
+  undoReturn,
   type DeckState,
   type Rng,
 } from '../src/PreguntaDelDia/deck';
@@ -139,6 +142,47 @@ describe('returning cards', () => {
   });
 });
 
+describe('undoing a return', () => {
+  let s: DeckState;
+  beforeEach(() => {
+    s = newState(ids, 'a', seeded());
+    s = draw(s, deckA, TODAY, 1)!;
+    s = draw(s, deckB, TODAY, 2)!;
+  });
+
+  it('puts the table card back on the table, with the pile as it was', () => {
+    const id = s.current!;
+    const back = undoReturn(returnCard(s, id, seeded(7)), s);
+    expect(back.current).toBe(id);
+    expect(back.order).toEqual(s.order);
+    expect(back.history).toEqual(s.history);
+    expectConsistent(back);
+  });
+
+  it('undoes returning every card, shuffle included', () => {
+    const after = returnAll(s, all, seeded(3));
+    expect(returnedCount(s, after)).toBe(2);
+    const back = undoReturn(after, s);
+    expect(back.order).toEqual(s.order);
+    expect(back.history).toEqual(s.history);
+    expect(remaining(back, all)).toBe(ids.length - 2);
+  });
+
+  it('keeps cards saved after the return', () => {
+    const older = s.history[0].id;
+    const after = toggleSaved(returnCard(s, older, seeded()), 'b4');
+    const back = undoReturn(after, s);
+    expect(back.saved).toEqual(['b4']);
+    expect(back.history.map((h) => h.id)).toContain(older);
+    expect(back.current).toBe(s.current);
+  });
+
+  it('counts one card for a single return, none for no change', () => {
+    expect(returnedCount(s, returnCard(s, s.current!, seeded()))).toBe(1);
+    expect(returnedCount(s, s)).toBe(0);
+  });
+});
+
 describe('table and deck selection', () => {
   it('clearTable keeps the card in the history', () => {
     const s = draw(newState(ids, 'a', seeded()), deckA, TODAY, 1)!;
@@ -179,6 +223,28 @@ describe('sync', () => {
   it('removes duplicates', () => {
     const s: DeckState = { ...newState(ids, 'todas', seeded()), order: [...ids, 'a1'] };
     expect(sync(s, ids, seeded()).order).toHaveLength(ids.length);
+  });
+});
+
+describe('saved cards', () => {
+  it('toggleSaved marks and unmarks a card', () => {
+    const s = newState(ids, 'todas', seeded());
+    const on = toggleSaved(s, 'a1');
+    expect(on.saved).toEqual(['a1']);
+    expect(toggleSaved(on, 'a1').saved).toEqual([]);
+    expect(s.saved).toEqual([]);
+  });
+
+  it('a saved card stays saved when it goes back in the deck', () => {
+    let s = draw(newState(ids, 'todas', seeded()), all, TODAY, 1)!;
+    const id = s.current!;
+    s = returnCard(toggleSaved(s, id), id, seeded());
+    expect(s.saved).toEqual([id]);
+  });
+
+  it('sync forgets saved cards that no longer exist', () => {
+    const s = { ...newState(ids, 'todas', seeded()), saved: ['a1', 'gone', 'a1'] };
+    expect(sync(s, ids, seeded()).saved).toEqual(['a1']);
   });
 });
 
@@ -226,6 +292,12 @@ describe('loadState', () => {
     store.set('k', JSON.stringify(saved));
     const s = loadState('k', ids, 'todas', seeded());
     expect(s).toEqual(saved);
+  });
+
+  it('reads a save from before saved cards existed', () => {
+    const { saved: _, ...old } = draw(newState(ids, 'b', seeded()), deckB, TODAY, 5)!;
+    store.set('k', JSON.stringify(old));
+    expect(loadState('k', ids, 'todas', seeded()).saved).toEqual([]);
   });
 
   it('survives corrupt data', () => {

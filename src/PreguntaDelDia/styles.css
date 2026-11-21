@@ -654,6 +654,9 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--pdd-radius);
+  /* Card text on card paper, wherever the card sits: the history's dark overlay
+     sets light page text, which would otherwise carry onto the cream paper. */
+  color: var(--pdd-text);
   background: var(--pdd-paper);
   border: 1px solid var(--pdd-paper-edge);
   box-shadow: var(--pdd-shadow);
@@ -885,6 +888,10 @@
   padding: calc(env(safe-area-inset-top) + 12px) 0 calc(env(safe-area-inset-bottom) + 20px);
   border: 0;
   background: rgb(1 30 50 / 0.96);
+  /* The overlay is dark in both themes, so the text on it is always light (a page
+     that embeds the deck may set dark page text for its own light background). */
+  --pdd-page-text: #e6eef4;
+  --pdd-page-muted: #9fb4c4;
   color: var(--pdd-page-text);
   font-family: var(--pdd-font-body);
   color-scheme: inherit;
@@ -976,8 +983,8 @@
   transition: transform 0.3s ease, opacity 0.3s ease;
   touch-action: pan-x; /* sideways moves between cards; up puts this one back */
 }
-/* With the help open the card's own text scrolls, so up and down scroll it. */
-.pdd__history-card:has(.pdd__help) {
+/* More text than fits (the help, or a short screen): up and down scroll it. */
+.pdd__history-card.is-scrollable {
   touch-action: auto;
 }
 /* the cards either side, smaller and dimmed, show there's more to swipe to */
@@ -993,8 +1000,207 @@
 }
 .pdd__history-empty {
   margin: auto;
+  padding: 0 16px;
   color: var(--pdd-page-muted);
   font-size: 1.1rem;
+  text-align: center;
+  line-height: 1.6;
+}
+.pdd__history-empty .pdd__star-icon {
+  vertical-align: -0.15em;
+}
+
+/* Cards or list, and the saved filter */
+.pdd__history-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 16px;
+}
+.pdd__segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--pdd-page-text) 45%, transparent);
+}
+.pdd__segmented button {
+  min-height: 34px;
+  padding: 0.3rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--pdd-page-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pdd__segmented button[aria-pressed='true'] {
+  background: var(--pdd-back-frame);
+  color: var(--pdd-back-2);
+}
+.pdd__segmented button:focus-visible,
+.pdd__history-open:focus-visible,
+.pdd__history-list:focus-visible,
+.pdd__undo-btn:focus-visible {
+  outline: 2px solid var(--pdd-page-text);
+  outline-offset: 2px;
+}
+.pdd__filter[aria-pressed='true'] {
+  border-color: #f2c94c;
+}
+.pdd__filter[aria-pressed='true'] .pdd__star-icon {
+  color: #f2c94c;
+}
+
+/* ★ on a card, and in the list */
+.pdd__meta-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pdd__star {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px -6px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--pdd-muted);
+  cursor: pointer;
+}
+.pdd__star .pdd__star-icon {
+  width: 20px;
+  height: 20px;
+}
+.pdd__star[aria-pressed='true'] {
+  /* Gold, at least 4:1 on the paper in both themes */
+  color: light-dark(#9a6f00, #f2c94c);
+}
+.pdd__star:hover {
+  color: var(--pdd-accent);
+}
+.pdd__star[aria-pressed='true']:hover {
+  color: light-dark(#6f5004, #f7d878);
+}
+.pdd__star:focus-visible {
+  outline: 2px solid var(--pdd-accent);
+  outline-offset: 0;
+}
+.pdd__star-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* The list: every card's question, grouped by the day it was drawn */
+.pdd__history-list {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 16px 5rem; /* room under the last row for the undo bar */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pdd__history-day h3 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0.6rem 0 0.4rem;
+  background: rgb(1 30 50);
+  color: var(--pdd-page-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pdd__history-day ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.pdd__history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-right: 0.6rem;
+  border-radius: 14px;
+  background: var(--pdd-paper);
+  color: var(--pdd-text);
+  /* A strip down the left in the card's deck colour */
+  box-shadow: inset 6px 0 0 var(--pdd-row-back, var(--pdd-back-1));
+}
+.pdd__history-row .pdd__star {
+  margin: 0;
+  flex: none;
+}
+.pdd__history-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.5rem 0.75rem 1.25rem;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pdd__history-q {
+  font-family: var(--pdd-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.pdd__history-meta {
+  color: var(--pdd-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* After putting cards back: "… · Deshacer", floating above the bottom */
+.pdd__history-undo {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: calc(100% - 32px);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--pdd-back-frame);
+  color: var(--pdd-back-2);
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.4);
+  z-index: 2;
+}
+.pdd__history-undo:empty {
+  display: none;
+}
+.pdd__undo-btn {
+  min-height: 34px;
+  padding: 0.3rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pdd-back-2);
+  color: var(--pdd-back-frame);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 @media (prefers-reduced-motion: reduce) {
   .pdd__history-card {

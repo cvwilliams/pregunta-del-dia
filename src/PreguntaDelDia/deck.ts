@@ -34,6 +34,8 @@ export interface DeckState {
   days: DayCount[];
   /** The selected deck. */
   deckId: string;
+  /** Cards marked to come back to (★). They stay marked when put back in the deck. */
+  saved: string[];
 }
 
 export type Rng = () => number;
@@ -58,7 +60,7 @@ function insertRandomly(order: string[], id: string, rng: Rng): string[] {
 }
 
 export function newState(ids: string[], deckId: string, rng: Rng): DeckState {
-  return { v: 2, order: shuffled(ids, rng), history: [], current: null, days: [], deckId };
+  return { v: 2, order: shuffled(ids, rng), history: [], current: null, days: [], deckId, saved: [] };
 }
 
 /**
@@ -77,7 +79,8 @@ export function sync(state: DeckState, ids: string[], rng: Rng): DeckState {
     }
   }
   const current = state.current && history.some((h) => h.id === state.current) ? state.current : null;
-  return { ...state, order, history, current };
+  const saved = [...new Set(state.saved.filter((id) => known.has(id)))];
+  return { ...state, order, history, current, saved };
 }
 
 /** Draw the top card of a deck. Returns null when the deck is empty. */
@@ -131,6 +134,28 @@ export function returnAll(state: DeckState, deck: Set<string>, rng: Rng): DeckSt
     current: state.current && deck.has(state.current) ? null : state.current,
   };
   return shuffle(next, deck, rng);
+}
+
+/**
+ * Undo putting cards back: the pile, the history and the table card go back to how
+ * they were in `before` (the state just before the return), so returned cards are
+ * drawn again in their old places. Anything else changed since, such as saved
+ * cards, is kept.
+ */
+export function undoReturn(state: DeckState, before: DeckState): DeckState {
+  return { ...state, order: before.order, history: before.history, current: before.current };
+}
+
+/** How many cards went back into the pile between two states. */
+export function returnedCount(before: DeckState, after: DeckState): number {
+  const still = new Set(after.history.map((h) => h.id));
+  return before.history.filter((h) => !still.has(h.id)).length;
+}
+
+/** Mark a card to come back to, or unmark it. */
+export function toggleSaved(state: DeckState, id: string): DeckState {
+  const saved = state.saved.includes(id) ? state.saved.filter((s) => s !== id) : [...state.saved, id];
+  return { ...state, saved };
 }
 
 /** Take the face-up card off the table (it stays in the history). */

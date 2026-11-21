@@ -44,6 +44,8 @@ function parse(data: any, ids: string[], defaultDeckId: string, rng: Rng): DeckS
         ? data.days.filter((d: any): d is DayCount => d && isNum(d.day) && isNum(d.draws))
         : [],
       deckId: isStr(data.deckId) ? data.deckId : defaultDeckId,
+      // Added later in version 2, so older saves don't have it.
+      saved: Array.isArray(data.saved) ? data.saved.filter(isStr) : [],
     };
   }
   if (Array.isArray(data.days)) {

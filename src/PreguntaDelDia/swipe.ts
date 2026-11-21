@@ -139,7 +139,10 @@ export function useSwipe(containerRef: RefObject<HTMLElement>, options: SwipeOpt
     const down = (e: PointerEvent) => {
       swallowClick = false;
       if (press || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
-      const el = (e.target as Element).closest<HTMLElement>(opts.current.handle);
+      // A mouse press on a scrollbar (the card's long help) drags the scrollbar.
+      const t = e.target as HTMLElement;
+      if (e.pointerType === 'mouse' && t.clientWidth && e.offsetX > t.clientWidth) return;
+      const el = t.closest<HTMLElement>(opts.current.handle);
       if (!el || !root.contains(el) || !opts.current.enabled(el, e)) return;
       const r = el.getBoundingClientRect();
       press = {
